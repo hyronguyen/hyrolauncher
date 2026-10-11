@@ -8,9 +8,12 @@ Test sources live here. Production C# sources remain in the project root. All ge
 node tests/run-smoke.cjs
 powershell -NoProfile -ExecutionPolicy Bypass -File tests/verify-hytcg-storage.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File tests/verify-hytcg-economy.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File tests/verify-publish-release-local.ps1
 ```
 
 The JavaScript smoke runner checks dialogs, MP3 playback and BGM ownership, pet movement, sound effects and the browser scrollbar. It does not launch games or call external APIs. Native storage/economy tests compile isolated fixtures with the Windows .NET Framework compiler; they do not modify the real account in `dist`.
+
+The release publisher check uses a mock HTTP handler to verify endpoint restrictions, streamed uploads, redacted errors and checksum matching. It does not retrieve credentials or contact GitHub.
 
 ## Current card and bookshelf checks
 
