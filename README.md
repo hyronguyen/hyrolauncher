@@ -1,6 +1,6 @@
 # HYROLauncher
 
-Portable Windows game menu launcher inspired by cyber cafe launchers, Steam Library, HoYoPlay, and Epic Games Launcher.
+Portable Windows game menu launcher inspired by cyber cafe launchers, Steam Library
 
 [Download the Windows installer](https://github.com/hyronguyen/hyrolauncher/releases/download/v1.0.0/HYROLauncher-Setup-1.0.0.exe) · [Portable ZIP](https://github.com/hyronguyen/hyrolauncher/releases/download/v1.0.0/HYROLauncher-Portable-1.0.0.zip) · [SHA-256 checksums](https://github.com/hyronguyen/hyrolauncher/releases/download/v1.0.0/SHA256SUMS.txt)
 
@@ -101,8 +101,6 @@ Project layout: production C# files at the root, `ui` for WebView2 screens, `ass
 - The Steam section header shows the account name/avatar when available, with a logo fallback. Steam card clicks open HYRO's detail screen; only Start launches Steam.
 
 - Steam-style library: game tiles plus a selected-game detail area.
-- HoYoPlay-style unified launcher: one app can launch many games and web links.
-- Epic-style library basics: search, categories, settings, and portable data.
 - The built-in HYRO Buddy PET uses `assets/pets/hyro-buddy-idle.gif`, a transparent eight-frame idle loop created from the supplied robot artwork. The existing default pet ID is retained for saved settings. Walking assets in older pet definitions are ignored.
 - The compact PET panel offers enable, companion, size and a 20–180 second dwell interval. Custom pets require only an idle GIF. Hovering over the pet or opening a dialog defers relocation; hiding the launcher stops its movement timer.
 - Movie Watchlist has a featured movie, horizontal Continue watching / My list / Completed shelves, search and status filters. Poster clicks open HyBrowser; visible progress/edit buttons work with mouse or keyboard. The quick progress editor preserves artwork and links, and drafts survive native state refreshes and file selection. Movies may be saved without an episode; progress bars appear only when a numeric episode and total are known.
