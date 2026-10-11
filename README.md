@@ -37,6 +37,19 @@ Fresh builds contain blank API credential files. Add your own values under the i
 Project layout: production C# files at the root, `ui` for WebView2 screens, `assets` for bundled resources, `tests` for regression suites, `scripts` for dependency/publication tooling, `packaging` for the installer, and `docs`/`licenses` for documentation and notices. `output` contains generated files only. See [test instructions](tests/README.md) and [third-party notices](docs/THIRD-PARTY-NOTICES.md).
 
 ## Features
+App launcher Menu:
+<img width="1252" height="730" alt="image" src="https://github.com/user-attachments/assets/4c8c830d-8e32-43c5-a8a0-6459ae6861bf" />
+<img width="1262" height="734" alt="image" src="https://github.com/user-attachments/assets/5e8fdd5a-3777-400f-bdd3-d6038e0243f4" />
+<img width="1254" height="743" alt="image" src="https://github.com/user-attachments/assets/7c6f8a3a-6782-443d-86ef-6f9830388cc0" />
+<img width="1272" height="754" alt="image" src="https://github.com/user-attachments/assets/ca50e41b-7492-420e-bf30-287cd14e2bb5" />
+
+<img width="1278" height="733" alt="image" src="https://github.com/user-attachments/assets/2473766e-f684-4f43-83dd-7ee480c963ac" />
+
+<img width="1285" height="738" alt="image" src="https://github.com/user-attachments/assets/695f36ac-c94a-46f9-bddd-56d08a45866d" />
+
+HYTCG:
+<img width="1113" height="849" alt="image" src="https://github.com/user-attachments/assets/4fb7b598-6fce-480d-ac5b-eb039de494c9" />
+
 
 - Add local games/programs: `.exe`, `.bat`, `.cmd`, `.lnk`
 - Scan installed games from Steam, Epic Games, and common game folders, then review and choose which games to import
