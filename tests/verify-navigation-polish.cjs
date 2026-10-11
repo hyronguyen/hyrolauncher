@@ -1,0 +1,15 @@
+const testRuntime = require('./test-runtime.cjs'); testRuntime.prepare();
+const fs=require('fs'),vm=require('vm'),assert=require('assert');
+const nav={children:[],insertBefore(node,before){const at=this.children.indexOf(before);this.children.splice(at<0?this.children.length:at,0,node);this.children.forEach((child,i)=>child.nextSibling=this.children[i+1] || null);},querySelector(){return null;}};
+const make=()=>({dataset:{},click(){this.onclick();}}),nodes={categories:nav,library:{classList:{contains:()=>true}},libraryBody:{scrollTop:100}};
+const c={state:{Settings:{Language:'en',SteamId:'76561198000000001',LibraryLayout:'carousel'}},currentCategory:'All',assets:{},document:{addEventListener(){},createElement:make,getElementById:id=>nodes[id],querySelectorAll:selector=>selector.includes('button[data-category]')?nav.children.filter(n=>n.dataset.category):[],querySelector:()=>nav.children.find(n=>n.dataset.category===c.currentCategory)},window:{addEventListener(){}},labelWithIcon:s=>s,igdbText:(vi,en)=>en,selectCategory:cat=>{c.currentCategory=cat;},cancelAnimationFrame(){},requestAnimationFrame(){},navigator:{},post(){},console};
+vm.createContext(c);for(const file of ['ui/big-picture.js','ui/steam-library.js','ui/explore.js'])vm.runInContext(fs.readFileSync(file,'utf8'),c);const run=s=>vm.runInContext(s,c);
+for(const category of ['All','Favorite','Private']){const node=make();node.dataset.category=category;node.onclick=()=>c.selectCategory(category);nav.children.push(node);}nav.children.push(make());
+run('steamNavigation();exploreNavigation()');assert.deepEqual(nav.children.filter(n=>n.dataset.category).map(n=>n.dataset.category),['All','Favorite','Private','__steam','__explore']);
+c.focusBigPicture=el=>c.focused=el.dataset.category;
+run('switchBigPictureTab(1)');assert.equal(c.currentCategory,'Favorite');assert.equal(c.focused,'Favorite');assert.equal(nodes.libraryBody.scrollTop,0);
+run('switchBigPictureTab(-1);switchBigPictureTab(-1)');assert.equal(c.currentCategory,'__explore','LB wraps from Home to Explore');
+const native=run('nativeToGamepad({buttons:256|512|16384})');assert(native.buttons[4].pressed && native.buttons[5].pressed && native.buttons[2].pressed);
+assert(run("controllerGlyph('accept')").includes('xbox-a'));c.state.Settings.ControllerGlyphs='playstation';assert(run("controllerGlyph('accept')").includes('✕'));assert(run("controllerGlyph('back')").includes('○'));assert(run("controllerGlyph('favorite')").includes('□'));assert(run("controllerGlyph('search')").includes('△'));
+c.state.Settings.SteamId='';nav.children=nav.children.slice(0,3);run('exploreNavigation()');assert.equal(nav.children[3].dataset.category,'__explore');
+console.log('PASS: Explore after Steam in navigation, no-Steam fallback, shoulder-tab navigation/wrap/focus, native LB/RB/X mapping and Xbox/PlayStation glyphs.');

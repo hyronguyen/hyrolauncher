@@ -1,0 +1,15 @@
+.tcgBrandIcon.tcgDevIcon{padding:7px;border:1px solid transparent;cursor:pointer;background:transparent;color:var(--accent);flex-shrink:0;border-radius:12px}
+.tcgBrandIcon.tcgDevIcon:hover{background:color-mix(in srgb,var(--accent) 9%,transparent);border-color:color-mix(in srgb,var(--accent) 24%,transparent)}
+.tcgDevIcon:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.devModeBadge{display:inline-flex;align-items:center;gap:8px;min-height:31px;padding:5px 9px;background:#1b2531;border:1px solid #526782;border-radius:9px;color:#d1e7ff;cursor:pointer;font:600 10px 'Segoe UI',sans-serif;letter-spacing:.05em;white-space:nowrap}
+.devModeBadge[hidden],.devModeTransition[hidden]{display:none}
+.devModeBadge time{font-variant-numeric:tabular-nums;color:#91caff;font-weight:500;letter-spacing:0}
+.devModeBadge i{font-size:17px;line-height:1;font-style:normal;font-weight:400;color:#a6bace}
+.tcgDevMode .tcgHeader{box-shadow:inset 0 -1px 0 #4c72964d}
+.devModeTransition{position:fixed;inset:0;z-index:10000;background:#0b1019ed;display:grid;place-content:center;justify-items:center;gap:18px;color:#b9cee1;font:500 13px 'Segoe UI',sans-serif}
+.devModeTransition .devSpinner{width:29px;height:29px;border:2px solid #344354;border-top-color:var(--accent,#91caff);border-radius:50%;animation:devSpin .8s linear infinite}
+@keyframes devSpin{to{transform:rotate(360deg)}}
+.theme-light .devModeBadge{background:#eef5fd;border-color:#a8bed5;color:#32557c}
+.theme-light .devModeTransition{background:#f0f5fbef;color:#3d5772}
+@media(max-width:440px){.devModeBadge{gap:5px;padding:5px 7px}.headerActions{gap:5px}.tcgDevMode .gemBalance{gap:4px}}
+@media(prefers-reduced-motion:reduce){.devModeTransition .devSpinner{animation:none;border-style:dotted}}

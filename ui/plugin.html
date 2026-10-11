@@ -1,0 +1,140 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>HYRO Plugin</title>
+  <style>
+    * { box-sizing: border-box; }
+    :root { --accent:#44a8ff; --bg:#0b0f19; --panel:#151a26; --text:#fff; --muted:rgba(255,255,255,.62); }
+    html, body { margin:0; width:100%; height:100%; overflow:hidden; font-family:"Segoe UI", Arial, sans-serif; color:var(--text); background:var(--bg); user-select:none; -webkit-user-select:none; }
+    input, textarea { user-select:text; -webkit-user-select:text; }
+    button, input, select { font:inherit; }
+    button { border:0; cursor:pointer; }
+    .shell { height:100vh; display:grid; grid-template-rows:auto minmax(0,1fr); gap:12px; padding:14px; background:linear-gradient(180deg, rgba(255,255,255,.035), transparent 150px), var(--bg); }
+    .hero { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:12px 14px; min-height:62px; border-radius:18px; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.1); }
+    .title { font-size:18px; font-weight:900; line-height:1.1; }
+    .sub { margin-top:4px; color:var(--muted); font-size:11px; font-weight:700; }
+    .body { min-height:0; overflow:auto; display:grid; gap:10px; padding-right:3px; scrollbar-width:thin; scrollbar-color:rgba(255,255,255,.24) transparent; }
+    .row { display:grid; grid-template-columns:118px minmax(0,1fr); gap:10px; align-items:center; }
+    .row label { color:rgba(255,255,255,.88); font-weight:750; }
+    input, select { width:100%; height:34px; border:1px solid rgba(255,255,255,.12); border-radius:12px; padding:0 11px; outline:none; color:#fff; background:rgba(255,255,255,.08); }
+    input[type=checkbox] { width:18px; height:18px; }
+    input[type=range] { accent-color:var(--accent); }
+    .inline { display:grid; grid-template-columns:minmax(0,1fr) 42px; gap:8px; }
+    .primary, .ghost, .danger, .small { min-height:32px; border-radius:12px; padding:0 13px; color:#fff; font-weight:850; background:rgba(255,255,255,.12); }
+    .primary { background:var(--accent); color:#08101c; }
+    .danger { background:#d23d44; }
+    .small { min-height:26px; font-size:11px; padding:0 8px; }
+    .actions { display:flex; justify-content:flex-end; gap:8px; flex-wrap:wrap; }
+    .card { display:grid; grid-template-columns:54px minmax(0,1fr) auto; align-items:center; gap:12px; padding:10px; border-radius:16px; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.08); }
+    .thumb { width:54px; height:54px; border-radius:13px; overflow:hidden; display:grid; place-items:center; color:var(--accent); background:rgba(255,255,255,.08); font-weight:900; }
+    .thumb img { width:100%; height:100%; object-fit:cover; }
+    .name { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:900; }
+    .meta { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-top:3px; color:var(--muted); font-size:12px; }
+    .sites { display:grid; gap:8px; max-height:180px; overflow:auto; }
+    .site { display:flex; align-items:center; gap:10px; padding:9px 10px; border-radius:12px; background:rgba(255,255,255,.055); }
+    html.theme-translucent, body.theme-translucent, .theme-translucent { background:transparent !important; }
+    .theme-translucent .shell { background:transparent; }
+    .theme-translucent .hero, .theme-translucent .card { background-color:rgba(10,14,24,.24); border-color:rgba(255,255,255,.14); }
+    .editor { display:none; gap:10px; padding:14px; border-radius:16px; background:rgba(255,255,255,.055); border:1px solid rgba(255,255,255,.08); }
+    .editor.show { display:grid; }
+    .empty { padding:18px; border-radius:16px; color:var(--muted); background:rgba(255,255,255,.05); }
+    .petPreview { height:176px; position:relative; overflow:hidden; border-radius:20px; background:radial-gradient(circle at 50% 16%, rgba(68,168,255,.22), transparent 42%), linear-gradient(180deg, rgba(255,255,255,.075), rgba(255,255,255,.035)); border:1px solid rgba(255,255,255,.1); box-shadow:inset 0 1px 0 rgba(255,255,255,.08); }
+    .petPreview::after { content:""; position:absolute; left:24px; right:24px; bottom:20px; height:1px; background:linear-gradient(90deg, transparent, rgba(255,255,255,.16), transparent); }
+    .previewPet .petVisual { position:absolute; inset:0; transform-origin:50% 50%; }
+    .previewPet .petGif { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; opacity:0; pointer-events:none; }
+    .previewPet .petFallback { position:absolute; inset:10%; border-radius:42% 42% 36% 36%; background:linear-gradient(160deg, rgba(255,255,255,.26), transparent 30%), linear-gradient(160deg, var(--accent), #101522); box-shadow:inset 0 3px 0 rgba(255,255,255,.32), inset 0 -12px 20px rgba(0,0,0,.18); }
+    .previewPet.hasGif .petFallback { display:none; }
+    .previewPet .petFallback::before, .previewPet .petFallback::after { content:""; position:absolute; top:34%; width:10px; height:13px; border-radius:999px; background:#06101d; box-shadow:0 0 0 2px rgba(255,255,255,.14); }
+    .previewPet .petFallback::before { left:30%; }
+    .previewPet .petFallback::after { right:30%; }
+    .petPreviewInfo { position:absolute; left:16px; top:14px; right:16px; display:flex; justify-content:space-between; gap:10px; color:rgba(255,255,255,.72); font-size:12px; font-weight:800; pointer-events:none; }
+  </style>
+  <link rel="stylesheet" href="controls.css">
+  <link rel="stylesheet" href="plugin-tools.css">
+  <link rel="stylesheet" href="mp3-player.css">
+  <script src="dialogs.js"></script>
+  <script src="ui-effects.js"></script>
+  <script src="plugin-tools.js"></script>
+  <script src="mp3-player.js"></script>
+</head>
+<body>
+  <div id="app" class="shell"></div>
+  <audio id="audio" preload="auto"></audio>
+  <script>
+    let state = { Games: [], Plugins: [], Settings: {} };
+    let assets = {};
+    let pluginId = new URLSearchParams(location.search).get('id') || '';
+    let search = '';
+    let petDraft = null;
+    let watchDraft = null;
+
+    function post(msg) { chrome.webview.postMessage(msg); }
+    function tr(en, vi) { return (state.Settings.Language || 'en') === 'vi' ? vi : en; }
+    function isRemoteUrl(v) { return /^(https?:|data:|blob:)/i.test(String(v || '').trim()); }
+    function fileUrl(p) { return p ? 'file:///' + String(p).replace(/\\/g, '/') : ''; }
+    function mediaUrl(v) { v = String(v || '').trim(); return isRemoteUrl(v) ? v : fileUrl(v); }
+    function id() { return 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2); }
+    function plugin() { return (state.Plugins || []).find(p => p.Id === pluginId) || null; }
+    function gameName(g) { return g && (g.Name || g.Path || 'App'); }
+    function fileNameNoExt(path) { return String(path || '').split(/[\\/]/).pop().replace(/\.[^.]+$/, ''); }
+    function esc(v) { return String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+    function savePlugin(p) { post({ type:'savePlugin', plugin:p }); }
+
+    chrome.webview.addEventListener('message', e => {
+      const msg = e.data;
+      if (msg.type === 'mp3PlaybackGranted') { receiveMusicGrant(msg); return; }
+      if (msg.type === 'petTimingPreview') { receivePetTimingPreview(msg); return; }
+      if (msg.type === 'movieImportPreview') { confirmMovieImport(msg); return; }
+      if (msg.type === 'movieTransferResult') { appAlert(msg.message); return; }
+      if (msg.type === 'browserWatch') {
+        if (watchDraft && document.getElementById('mEpisode')) syncWatchDraft();
+        receiveBrowserWatch(msg); return;
+      }
+      if (msg.type === 'state') {
+        if (watchDraft && document.getElementById('mEpisode')) syncWatchDraft();
+        const movieDraftChanged = draftChanged();
+        syncPetPanelDraft(); syncPetDraft();
+        state = msg.state || state;
+        assets = msg.assets || assets;
+        uiEffects.configure(state.Settings, assets);
+        pluginId = msg.pluginId || pluginId;
+        if (watchDraft && !movieDraftChanged) {
+          const updated = (plugin()?.WatchItems || []).find(item => item.Id === watchDraft.Id);
+          if (updated) watchDraft = { ...updated };
+        }
+        document.documentElement.style.setProperty('--accent', (state.Settings.AccentColor || '#44A8FF'));
+        const translucent = (state.Settings.ThemeMode || '').toLowerCase() === 'translucent';
+        document.documentElement.classList.toggle('theme-translucent', translucent);
+        document.body.classList.toggle('theme-translucent', translucent);
+        document.body.dataset.language = state.Settings.Language || 'en';
+        document.body.classList.toggle('theme-light', (state.Settings.ThemeMode || '').toLowerCase() === 'light');
+        render();
+      }
+      if (msg.type === 'fileChosen') {
+        if (msg.kind === 'mp3Track') addTracks(msg.paths || [msg.path]);
+        if (msg.kind === 'moviePoster' && watchDraft) { syncWatchDraft(); watchDraft.PosterPath = msg.path; renderMovieEditor(true); }
+        if ((msg.kind === 'petIdleGif' || msg.kind === 'petDragGif') && petDraft) {
+          syncPetDraft(); syncPetPanelDraft();
+          petDraft[msg.kind === 'petIdleGif' ? 'IdleGifPath' : 'DragGifPath'] = msg.path;
+          renderPetEditor(true);
+          syncPetPreview();
+        }
+      }
+    });
+
+    function render() {
+      const p = plugin();
+      if (!p) { app.innerHTML = '<div class="empty">Plugin not found</div>'; return; }
+      const type = (p.Type || '').toLowerCase();
+      app.classList.toggle('mp3Shell',type==='mp3');
+      if (type === 'mp3') renderMp3(p);
+      else if (type === 'movie-watchlist') renderMovie(p);
+      else if (type === 'pet') renderPet(p);
+      else app.innerHTML = '<div class="empty">Unsupported plugin</div>';
+    }
+
+    post({ type:'ready' });
+  </script>
+</body>
+</html>

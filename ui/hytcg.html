@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' file:; script-src 'self'; style-src 'self'; img-src 'self' file: data:; connect-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'">
+  <title>HYTCG</title>
+  <link rel="stylesheet" href="hytcg.css?v=20261011-portrait4">
+  <link rel="stylesheet" href="hytcg-lifestyle.css?v=20261011-portrait4">
+  <link rel="stylesheet" href="hytcg-adventure.css?v=20261011-portrait4">
+  <link rel="stylesheet" href="hytcg-dev.css?v=20261011-portrait4">
+  <link rel="stylesheet" href="hytcg-effects.css?v=20261011-portrait4">
+  <script src="ui-effects.js" defer></script>
+  <script src="hytcg-rarity.js?v=20261011-portrait4" defer></script>
+  <script src="hytcg-renderer.js?v=20261011-portrait4" defer></script>
+  <script src="hytcg-dev.js?v=20261011-portrait4" defer></script>
+  <script src="hytcg-frame-repair.js?v=20261011-portrait4" defer></script>
+  <script src="hytcg.js?v=20261011-portrait4" defer></script>
+  <script src="hytcg-adventure.js?v=20261011-portrait4" defer></script>
+  <script src="hytcg-lifestyle.js?v=20261011-portrait4" defer></script>
+  <script src="hytcg-effects.js?v=20261011-portrait4" defer></script>
+</head>
+<body>
+  <div class="tcgShell">
+    <header class="tcgHeader">
+      <div class="tcgBrand"><button id="tcgDevIcon" class="tcgBrandIcon tcgDevIcon" type="button" aria-label="HYTCG"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><path d="M5.5 18 2.4 6.5a2 2 0 0 1 1.4-2.4l7.5-2a2 2 0 0 1 2.4 1.4l.5 1.8"/><rect x="7" y="5.5" width="13.5" height="16" rx="2.4"/><path d="m13.7 9 1.1 3.3 3.3 1.1-3.3 1.1-1.1 3.3-1.1-3.3-3.3-1.1 3.3-1.1z"/></svg></button><div><strong>HYTCG</strong><span id="tagline" hidden></span></div></div>
+      <div class="headerActions"><button id="devModeBadge" class="devModeBadge" type="button" hidden><span>DEV</span><time id="devModeClock">10:00</time><i aria-hidden="true">×</i></button><span class="gemBalance" title="Gems"><b aria-hidden="true">◆</b><strong id="gemBalance">—</strong></span><button id="expandPanel" class="iconButton" aria-label="Expand panel" title="Expand panel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M9 3H3v6m12-6h6v6M3 15v6h6m12-6v6h-6M3 3l6 6m12-6-6 6M3 21l6-6m12 6-6-6"/></svg></button><button id="settingsButton" class="iconButton" aria-label="Pack rules" title="Pack rules">?</button></div>
+    </header>
+    <nav class="tcgTabs" aria-label="HYTCG"><button id="boosterTab" class="active" aria-selected="true">Booster</button><button id="collectionTab" aria-selected="false">Collection <span id="collectionCount">0</span></button><button id="dexTab" aria-selected="false">CharacterDex</button><button id="missionsTab" aria-selected="false">Daily</button><button id="lifestyleTab" aria-selected="false">Atelier</button><button id="folderButton" class="folderButton" title="Open cards folder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 7V5h6l2 2h10v13H3zM3 11h18"/></svg></button></nav>
+    <section class="walletBar" aria-label="Opening credits"><div class="walletCredits"><span><b id="freeBalance">—</b><span id="freeLabel">Free</span></span><span><b id="paidBalance">—</b><span id="paidLabel">Extra</span></span></div><div class="walletTimer"><span id="refillLabel">Next free card</span><strong id="refillCountdown">—</strong></div><button id="buyPull" class="buyButton"><b>◆</b><span>160</span><small id="buyLabel">Open x1</small></button></section>
+    <main id="tcgScroll" class="tcgScroll">
+      <div id="pendingUpgradeBanner" class="recoveryBanner" hidden><span id="pendingUpgradeText"></span><button id="resumeUpgrade" class="quietButton">Resume upgrade</button></div>
+      <section id="boosterView">
+        <div class="limitedHeading"><div><span class="eyebrow" id="limitedEyebrow">DAILY SPOTLIGHT</span><h2 id="limitedTitle">Limited banners</h2></div><div class="limitedBalance"><b>✦</b><strong id="limitedBalance">0</strong><button id="buyLimited" class="quietButton" title="Buy 1 limited credit">+ <span>◆ 180</span></button></div></div>
+        <div class="limitedPayment"><button id="limitedGems" class="active" aria-pressed="true">◆ Gems</button><button id="limitedCredits" aria-pressed="false">✦ Credits</button><span id="bannerRefreshTime"></span></div>
+        <div id="limitedBanners" class="limitedBanners" aria-live="polite"></div>
+        <div class="packHero">
+          <div class="packVisual" aria-hidden="true"><div class="packBack one"></div><div class="packBack two"></div><div class="packFront"><span>HYTCG</span><div class="packOrbit"></div><b>✦</b><small>CHARACTER<br>BOOSTER PACK</small><i>01 / ANIME & GAME</i></div></div>
+          <div class="packCopy"><span class="eyebrow" id="packEyebrow">ANIME × GAME</span><h1 id="packTitle">A new character.<br>A new story.</h1><p id="packDescription">Random characters. Unique artwork. Yours to collect.</p></div>
+          <div class="packActions"><div class="paymentModes" aria-label="Pay with"><button id="payCredits" class="active" aria-pressed="true">Credits</button><button id="payGems" aria-pressed="false">◆ Gems</button></div><button id="openOne" class="openButton"><span>Open x1</span><b id="oneCost">1 credit</b></button><button id="openTen" class="openButton primary"><span>Open x10</span><b id="tenCost">10 credits</b></button></div>
+          <div id="packHint" class="packHint">Every card is saved to your device.</div>
+        </div>
+        <div id="dyeBoosterMount"></div>
+        <div id="pityTrack" class="pityTrack" aria-label="Guaranteed rarity progress"></div>
+        <div id="rarityLegend" class="rarityLegend"></div>
+        <div class="sectionHeading"><h2 id="resultsHeading">Your latest pulls</h2><span id="packProgress" aria-live="polite"></span></div>
+        <div id="results" class="cardGrid"><div id="firstPull" class="firstPull"><span>✧</span><strong id="firstTitle">Your collection starts here</strong><p id="firstDescription">Open a booster to reveal your first character.</p></div></div>
+      </section>
+      <section id="dexView" hidden>
+        <div class="viewHeading"><div><span class="eyebrow">CHARACTERDEX</span><h1 id="dexTitle">Discover characters</h1></div></div>
+        <form id="dexForm" class="dexForm"><label class="searchField"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10" cy="10" r="6"/><path d="m15 15 5 5"/></svg><input id="dexSearch" type="search" placeholder="Character or series" maxlength="120" required></label><select id="dexMode" aria-label="Search type"><option value="character">Character</option><option value="series">Series</option></select><button id="dexSubmit" class="openButton primary" type="submit">Search</button></form>
+        <div id="dexStatus" class="viewStatus" role="status"></div><div id="dexResults" class="dexGrid"></div><button id="dexMore" class="moreButton" hidden>Load more</button>
+      </section>
+      <section id="missionsView" hidden>
+        <div class="viewHeading"><div><span class="eyebrow" id="missionDay"></span><h1 id="missionsTitle">Daily missions</h1></div><span id="missionSummary" class="missionSummary"></span></div>
+        <div id="missionCards" class="missionCards"></div>
+      </section>
+      <section id="collectionView" hidden>
+        <div class="collectionHeading"><div><span class="eyebrow" id="collectionEyebrow" hidden></span><h1 id="collectionTitle">Collection</h1></div><button id="refreshCollection" class="quietButton">↻ <span>Refresh</span></button></div>
+        <div class="collectionToolbar"><div class="collectionFilters"><label class="searchField"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10" cy="10" r="6"/><path d="m15 15 5 5"/></svg><input id="collectionSearch" type="search" placeholder="Character or series" maxlength="180"></label><select id="rarityFilter" aria-label="Rarity"><option value="">All rarities</option></select><button id="favoritesFilter" class="favoritesFilter" aria-pressed="false">♡ Favorites</button><select id="collectionSort" aria-label="Sort"><option value="newest">Newest</option><option value="rarity">Rarity</option><option value="name">Name</option></select><button id="resetFilters" class="quietButton resetFilters" title="Clear filters" hidden>×</button></div>
+        <div class="collectionTools"><p id="collectionStatus" class="collectionStatus" aria-live="polite"></p><div class="selectionToolbar"><button id="selectVisible" class="quietButton">Select visible</button><button id="clearSelection" class="quietButton" disabled>Clear</button><span id="selectionCount">0 selected</span><button id="dissolveSelected" class="batchDissolve" disabled>◆ Dissolve</button></div></div></div>
+        <div id="collectionGrid" class="cardGrid"></div>
+        <button id="collectionMore" class="moreButton" hidden>Load more</button>
+      </section>
+      <section id="lifestyleView" class="lifestyleView" hidden>
+        <div class="lifeHeading"><div><span class="eyebrow">HYTCG ATELIER</span><h1 id="lifestyleTitle">Your characters, your world</h1></div><button id="lifestyleRefresh" class="quietButton" aria-label="Refresh">↻</button></div>
+        <nav id="lifestyleNav" class="lifeNav" aria-label="Atelier"></nav>
+        <div id="lifestyleStatus" class="lifeStatus" role="status" aria-live="polite"></div>
+        <div id="lifestyleContent"></div>
+      </section>
+    </main>
+    <div id="toast" class="toast" role="status" hidden></div>
+  </div>
+  <dialog id="settingsDialog" class="settingsDialog rulesDialog">
+    <div class="dialogHeading"><div><span class="eyebrow">HYTCG</span><h2 id="settingsTitle">Pack rules</h2></div><button class="iconButton" data-close="settingsDialog" aria-label="Close">×</button></div>
+    <p id="rulesDescription" class="rulesDescription"></p>
+    <div class="rulesTable"><div class="rulesTableHead"><span id="rarityHeading">Rarity</span><span id="ratesHeading">Chance</span><span id="salvageHeading">Dissolve</span></div><div id="rateFields" class="rateFields"></div></div>
+    <p id="rulesHint" class="fieldHint"></p>
+    <div class="accountDanger"><span id="accountLabel">Account</span><button id="resetAccount" class="dangerQuiet">Delete account</button></div>
+    <div class="dialogActions"><button class="quietButton" data-close="settingsDialog" id="settingsCancel">Got it</button></div>
+  </dialog>
+  <dialog id="accountDialog" class="settingsDialog accountDialog"><div class="dialogHeading"><div><span class="eyebrow">HYTCG</span><h2 id="deleteTitle">Delete account</h2></div><button class="iconButton" data-close="accountDialog" aria-label="Close">×</button></div><p id="deleteWarning">All cards and progress will be deleted. The new account starts with 1,800 gems.</p><label id="deleteLabel" for="deleteConfirmation">Type delete to confirm</label><input id="deleteConfirmation" autocomplete="off" spellcheck="false" placeholder="delete" maxlength="6"><p id="deleteError" class="inlineError" role="alert"></p><div class="dialogActions"><button id="deleteCancel" class="quietButton" data-close="accountDialog">Cancel</button><button id="confirmDelete" class="confirmDissolve" disabled>Delete account</button></div></dialog>
+  <dialog id="dexDialog" class="dexDialog"><div class="dialogHeading"><div><span class="eyebrow">CHARACTERDEX</span><h2 id="dexCharacterName"></h2><p id="dexCharacterSeries"></p></div><button class="iconButton" data-close="dexDialog" aria-label="Close">×</button></div><div id="dexMetadata" class="dexMetadata"></div><div id="dexArtworkStatus" class="viewStatus" role="status"></div><div id="dexArtworks" class="dexArtworks"></div><button id="dexArtworkMore" class="moreButton" hidden>Load more</button></dialog>
+  <dialog id="cardDialog" class="cardDialog"><div class="cardDialogTop"><span>HYTCG COLLECTION</span><div class="cardDialogTools"><button id="cardEffectsButton" class="cardEffectsButton" aria-pressed="true">✧ 3D</button><button class="iconButton" data-close="cardDialog" aria-label="Close">×</button></div></div><div id="cardDetail"></div></dialog>
+  <dialog id="batchDialog" class="batchDialog"><div class="dialogHeading"><div><span class="eyebrow">HYTCG</span><h2 id="batchTitle">Dissolve selected cards</h2></div><button class="iconButton" data-close="batchDialog" aria-label="Close">×</button></div><div class="batchSummary"><strong id="batchCardCount"></strong><span id="batchGemValue"></span></div><p id="batchWarning" class="fieldHint"></p><p id="batchFavoriteWarning" class="favoriteWarning" hidden></p><p id="batchError" class="inlineError" role="alert"></p><div class="dialogActions"><button id="batchCancel" class="quietButton" data-close="batchDialog">Keep cards</button><button id="confirmBatchDissolve" class="confirmDissolve">Dissolve</button></div></dialog>
+  <dialog id="upgradeDialog" class="upgradeDialog"><div class="dialogHeading"><div><span class="eyebrow">HYTCG</span><h2 id="upgradeTitle">Upgrade card</h2></div><button id="closeUpgrade" class="iconButton" aria-label="Close">×</button></div><div id="upgradeIdentity" class="upgradeIdentity"></div><div id="upgradePicker"><div class="materialModes"><button id="materialSame" aria-pressed="false">1 matching character</button><button id="materialTen" class="active" aria-pressed="true">10 cards</button></div><p id="materialRule" class="fieldHint"></p><label class="searchField materialSearch"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10" cy="10" r="6"/><path d="m15 15 5 5"/></svg><input id="materialSearch" type="search" placeholder="Find materials" maxlength="180"></label><div id="materialGrid" class="materialGrid"></div><button id="materialLoadMore" class="moreButton" hidden>Load more materials</button><label class="changeArtwork"><input id="changeArtwork" type="checkbox"><span id="changeArtworkLabel">Try a new artwork</span></label></div><div id="upgradePreview" class="upgradePreview" hidden></div><div class="upgradeFooter"><p id="upgradeFavoriteWarning" class="favoriteWarning" hidden></p><p id="upgradeError" class="inlineError" role="alert"></p><span id="materialCount">0 / 10</span><div><button id="cancelUpgrade" class="quietButton">Cancel</button><button id="confirmUpgrade" class="upgradeButton" disabled>Upgrade</button></div></div></dialog>
+  <dialog id="lifestylePicker" class="lifeDialog"><div class="dialogHeading"><h2 id="lifestylePickerTitle"></h2><button class="iconButton" data-life-close="lifestylePicker" aria-label="Close">×</button></div><input id="lifestylePickerSearch" type="search" maxlength="80"><div id="lifestylePickerGrid" class="lifePickerGrid"></div><button id="lifestylePickerMore" class="moreButton" hidden></button></dialog>
+  <dialog id="lifestyleItemPicker" class="lifeDialog"><div class="dialogHeading"><h2 id="lifestyleItemPickerTitle"></h2><button class="iconButton" data-life-close="lifestyleItemPicker" aria-label="Close">×</button></div><input id="lifestyleItemSearch" type="search" maxlength="80"><div id="lifestyleItemPickerGrid" class="lifeUnifiedInventory"></div><div class="lifeActions"><button class="lifeButton" id="lifestyleItemInventory">Inventory</button></div></dialog>
+  <dialog id="lifestyleAlbumDialog" class="lifeDialog lifeAlbumDialog"><div class="dialogHeading"><div><span class="eyebrow">HYTCG ALBUM</span><h2 id="lifestyleAlbumDialogTitle"></h2></div><button class="iconButton" data-life-close="lifestyleAlbumDialog" aria-label="Close">×</button></div><div id="lifestyleAlbumDisplay" class="lifeAlbumDisplay"></div></dialog>
+<div id="devModeTransition" class="devModeTransition" role="status" aria-live="polite" hidden><span class="devSpinner" aria-hidden="true"></span><span id="devModeTransitionLabel"></span></div></body>
+</html>
+
+

@@ -1,0 +1,92 @@
+'use strict';
+const testRuntime = require('./test-runtime.cjs'); testRuntime.prepare();
+const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
+const {chromium}=require('./test-runtime.cjs').playwright();
+const root=testRuntime.projectRoot,out=path.join(testRuntime.verificationRoot,'studio-position-ui');
+const sourceImage=path.join(__dirname,'fixtures/StudioUR.png');
+const image='data:image/png;base64,'+fs.readFileSync(fs.existsSync(sourceImage)?sourceImage:path.join(root,'assets/default-logo.png')).toString('base64');
+const reusable=fs.readFileSync(path.join(__dirname,'verify-hytcg-adventure-ui.cjs'),'utf8');
+const start=reusable.indexOf('  await page.addInitScript('),end=reusable.indexOf('  await page.goto(',start);
+assert(start>0&&end>start,'Existing isolated UI fixture found');
+let fixture=reusable.slice(start,end)
+ .replace('creative.RestorableLooks=[];creative.FrameItems=[];',"creative.RestorableLooks=[];creative.FrameItems=[];creative.Cosmetics=[{CardId:roster[0].CardId,Frame:'classic',FrameItemId:'',DyeId:palette[1].Id,Dye:palette[1].Color,Mystic:true,ArtworkId:'legacy-art',ArtworkScale:1,ArtworkX:0,ArtworkY:0}];")
+ .replace("(msg.artworkId||'')===(old?.ArtworkId||'');return", "(msg.artworkId||'')===(old?.ArtworkId||'')&&(msg.artworkScale||1)===(old?.ArtworkScale||1)&&(msg.artworkX||0)===(old?.ArtworkX||0)&&(msg.artworkY||0)===(old?.ArtworkY||0);return")
+ .replace("MorphMode:'none',ArtworkId:msg.artworkId||''", "MorphMode:'none',ArtworkId:msg.artworkId||'',ArtworkScale:msg.artworkScale||1,ArtworkX:msg.artworkX||0,ArtworkY:msg.artworkY||0");
+(async()=>{
+ fs.mkdirSync(out,{recursive:true});const browser=await chromium.launch({channel:'msedge',headless:true}),checks=[];
+ try{
+  const page=await browser.newPage({viewport:{width:1100,height:1000}}),errors=[],network=[],csp=[];
+  page.on('pageerror',error=>errors.push(error.message));page.on('request',request=>{if(/^https?:/.test(request.url()))network.push(request.url());});
+  page.on('console',msg=>{if(msg.type()==='error'&&/Content Security Policy/.test(msg.text()))csp.push(msg.text());});
+  await page.route(/^https?:\/\//,route=>route.abort());
+  await new Function('page','image','previewImages','return (async()=>{'+fixture+'})();')(page,image,{classic:image});
+  await page.goto('file:///'+path.join(root,'ui/hytcg.html').replaceAll('\\','/'));await page.waitForFunction(()=>HyTcgLifestyle&&tcg.config);
+  const check=(ok,label)=>{assert(ok,label);checks.push(label);};
+  const setRange=async(id,value)=>{await page.locator('#'+id).evaluate((n,value)=>{n.value=String(value);n.dispatchEvent(new Event('input',{bubbles:true}));},value);};
+  const waitPosition=async(scale,x,y)=>page.waitForFunction(([scale,x,y])=>lifeQa.messages.some(m=>m.type==='hytcgLifestyleImage'&&m.previewFrameId&&m.artworkScale===scale&&m.artworkX===x&&m.artworkY===y),[scale,x,y]);
+  await page.click('[data-life-view="studio"]');await page.waitForSelector('#lifeArtworkPosition');
+  check(await page.locator('#lifeArtworkPosition').evaluate(n=>!n.open),'Alignment controls start collapsed');
+  check(await page.locator('#lifeStudioPreview.landscape').count()===0,'Studio always uses portrait card stage');
+  check(await page.locator('#lifeStudioPreview').evaluate(n=>getComputedStyle(n).aspectRatio==='5 / 7'),'Portrait stage has trading-card aspect ratio');
+  await waitPosition(1,0,0);check(true,'Initial native preview includes default position');
+  await page.locator('#lifeArtworkPosition summary').click();
+  check(await page.locator('#lifeArtworkScale').evaluate(n=>n.min==='100'&&n.max==='400'),'Zoom bounds 100–400%');
+  for(const key of['X','Y'])check(await page.locator('#lifeArtwork'+key).evaluate(n=>n.min==='-100'&&n.max==='100'),'Normalized '+key+' bounds');
+  await setRange('lifeArtworkScale',240);await setRange('lifeArtworkX',-35);await setRange('lifeArtworkY',25);await waitPosition(2.4,-.35,.25);
+  check(await page.locator('#lifeArtworkScaleValue').textContent()==='240%','Zoom output follows slider');
+  check(await page.locator('#lifeArtworkXValue').textContent()==='-35%','Horizontal output follows slider');
+  check(await page.locator('#lifeArtworkYValue').textContent()==='25%','Vertical output follows slider');
+  await page.waitForFunction(()=>!document.querySelector('[data-life-action="cosmeticSave"]').disabled);
+  check(await page.evaluate(()=>{const m=lifeQa.messages.filter(m=>m.action==='quote').at(-1);return m.artworkScale===2.4&&m.artworkX===-.35&&m.artworkY===.25&&m.dyeId==='dye-01'&&m.artworkId==='legacy-art';}),'Quote includes alignment with existing dye and artwork');
+  await page.screenshot({path:path.join(out,'studio-alignment-1100.png')});
+  const dyeCount=await page.evaluate(()=>lifeQa.getDyeCount('dye-01')),gems=await page.evaluate(()=>lifeQa.getGems());
+  await page.click('[data-life-action="cosmeticSave"]');await page.waitForFunction(()=>lifeQa.messages.some(m=>m.action==='cosmeticSave'));
+  await page.waitForFunction(()=>document.querySelector('#lifestyleContent').getAttribute('aria-busy')==='false');
+  check(await page.evaluate(()=>{const m=lifeQa.messages.filter(m=>m.action==='cosmeticSave').at(-1);return m.artworkScale===2.4&&m.artworkX===-.35&&m.artworkY===.25&&m.frame==='classic'&&m.frameItemId==='';}),'Apply persists all alignment fields through paid operation');
+  check(await page.evaluate(()=>lifeQa.getDyeCount('dye-01'))===dyeCount,'Position-only apply does not consume dye again');
+  check(await page.evaluate(()=>lifeQa.getGems())===gems,'Position-only apply does not import or charge another image');
+  check(await page.locator('[data-life-action="cosmeticSave"]').isDisabled(),'Applied alignment is clean');
+  await page.click('[data-life-view="inventory"]');await page.click('[data-life-view="studio"]');await page.locator('#lifeArtworkPosition summary').click();
+  check(await page.locator('#lifeArtworkScale').inputValue()==='240'&&await page.locator('#lifeArtworkX').inputValue()==='-35'&&await page.locator('#lifeArtworkY').inputValue()==='25','Saved alignment reloads on next Studio visit');
+  await page.click('[data-life-action="artworkPositionReset"]');await waitPosition(1,0,0);
+  check(await page.locator('#lifeArtworkScale').inputValue()==='100'&&await page.locator('#lifeArtworkX').inputValue()==='0'&&await page.locator('#lifeArtworkY').inputValue()==='0','Reset centers original artwork');
+  const rect=await page.locator('#lifeStudioPreview').boundingBox();
+  await page.mouse.move(rect.x+rect.width/2,rect.y+rect.height/2);await page.mouse.down();await page.mouse.move(rect.x+rect.width*(.5+532/600*.2),rect.y+rect.height*(.5+772/840*.1),{steps:5});
+  check(await page.locator('#lifeStudioPreview.positioning').count()===1,'Dragging has attached alignment guide');await page.mouse.up();await waitPosition(1,.4,.2);
+  check(await page.locator('#lifeArtworkX').inputValue()==='40'&&await page.locator('#lifeArtworkY').inputValue()==='20','Pointer drag adjusts artwork and slider values');
+  check(await page.locator('#lifeStudioPreview.positioning').count()===0,'Pointer release removes alignment guide');
+  await page.locator('#lifeStudioPreview').focus();await page.keyboard.press('Shift+ArrowLeft');await waitPosition(1,.3,.2);
+  check(await page.locator('#lifeArtworkX').inputValue()==='30','Keyboard alignment supports larger shift steps');
+  await page.keyboard.press('ArrowUp');await waitPosition(1,.3,.18);check(true,'Keyboard precise movement reaches native compositor');
+  await page.keyboard.press('Home');await waitPosition(1,0,0);check(await page.locator('#lifeArtworkY').inputValue()==='0','Home resets alignment');
+  await page.evaluate(()=>{lifeQa.quoteDelay=250;});await setRange('lifeArtworkScale',120);await page.waitForTimeout(140);await setRange('lifeArtworkX',75);
+  check(await page.locator('[data-life-action="cosmeticSave"]').isDisabled(),'Pending quote invalidated by movement');
+  await waitPosition(1.2,.75,0);await page.waitForFunction(()=>!document.querySelector('[data-life-action="cosmeticSave"]').disabled);
+  check(await page.evaluate(()=>{const m=lifeQa.messages.filter(m=>m.action==='quote').at(-1);return m.artworkScale===1.2&&m.artworkX===.75;}),'Latest coordinates own final quote after delayed reply');
+  await page.evaluate(()=>HyTcgLifestyle.showStudio('HT-FIXTURE-99'));await page.waitForFunction(()=>document.querySelector('.lifeCharacterButton strong')?.textContent==='Character 099');
+  check(await page.locator('#lifeStudioPreview.landscape').count()===0&&await page.locator('#lifeStudioPreview').evaluate(n=>getComputedStyle(n).aspectRatio==='5 / 7'),'Old horizontal metadata still presents portrait Studio');
+  await setRange('lifeArtworkScale',400);await setRange('lifeArtworkX',-100);await setRange('lifeArtworkY',100);await waitPosition(4,-1,1);check(true,'Native preview receives allowed extrema');
+  await page.waitForFunction(()=>!document.querySelector('[data-life-action="cosmeticSave"]').disabled);await page.click('[data-life-action="cosmeticSave"]');
+  await page.waitForFunction(()=>lifeQa.messages.filter(m=>m.action==='cosmeticSave').length===2&&document.querySelector('#lifestyleContent').getAttribute('aria-busy')==='false');
+  check(await page.locator('[data-life-action="cosmeticReset"]').isVisible(),'Position-only saved cosmetic exposes original reset');
+  await page.click('[data-life-action="cosmeticReset"]');await page.waitForFunction(()=>lifeQa.messages.some(m=>m.action==='cosmeticReset')&&document.querySelector('#lifestyleContent').getAttribute('aria-busy')==='false');
+  await page.locator('#lifeArtworkPosition').evaluate(n=>n.open=true);check(await page.locator('#lifeArtworkScale').inputValue()==='100'&&await page.locator('#lifeArtworkX').inputValue()==='0'&&await page.locator('#lifeArtworkY').inputValue()==='0','Original reset clears saved position-only cosmetic');
+  await page.click('[data-life-view="album"]');await page.waitForSelector('.albumClosed');await page.click('[data-adventure-album="AL-fixture"]');await page.waitForSelector('.bookSlot .lifeMiniCard img[src]');
+  check(await page.locator('.bookSlot').count()===12,'Book spread keeps twelve pockets');
+  check(await page.locator('.bookSlot .lifeMiniCard').first().evaluate(n=>{const s=getComputedStyle(n);return s.backgroundColor==='rgba(0, 0, 0, 0)'&&s.backgroundImage==='none'&&s.boxShadow==='none';}),'Album card has no dark backing or card shadow');
+  check(await page.locator('.bookSlot').first().evaluate(n=>!getComputedStyle(n).backgroundImage.includes('0, 0, 0')),'Transparent pocket does not introduce black gradient');
+  await page.screenshot({path:path.join(out,'album-clean-1100.png')});
+  await page.click('[data-adventure-action="albumEdit"]');check(await page.locator('[data-adventure-remove]').count()===3,'Pencil editing still enables card removal');
+  await page.click('[data-adventure-action="albumExitEdit"]');check(await page.locator('[data-adventure-remove]').count()===0,'Showcase stays free of edit controls');
+  for(const width of[375,500,1100])for(const language of['en','vi']){
+   await page.setViewportSize({width,height:1000});await page.evaluate(language=>{tcg.language=language;translate();},language);await page.click('[data-life-view="studio"]');await page.waitForSelector('#lifeArtworkPosition');await page.locator('#lifeArtworkPosition').evaluate(n=>n.open=true);
+   check(await page.locator('#lifestyleContent').evaluate(n=>n.scrollWidth<=n.clientWidth+2),'Position controls fit '+width+'/'+language);
+   check(await page.locator('#lifeArtworkPosition input').count()===3,'Accessible position sliders available '+width+'/'+language);
+   if(width===375&&language==='vi')await page.screenshot({path:path.join(out,'studio-alignment-375.png')});
+  }
+  check(await page.evaluate(()=>lifeQa.peakImages<=2),'Image concurrency remains bounded at two');
+  check(errors.length===0,'No JavaScript errors: '+errors.join('; '));check(csp.length===0,'No CSP errors: '+csp.join('; '));check(network.length===0,'No external network requests');
+  fs.writeFileSync(path.join(out,'report.json'),JSON.stringify({Result:'PASS',Checks:checks.length,Assertions:checks,Errors:errors,CspErrors:csp,NetworkRequests:network,ProductionDataAccessed:false},null,2));
+  console.log('PASS Studio artwork alignment and clean album '+checks.length+' checks');
+ }finally{await browser.close();}
+})().catch(error=>{console.error(error.stack);process.exitCode=1;});

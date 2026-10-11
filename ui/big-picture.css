@@ -1,0 +1,37 @@
+.bigPicture .app {--content-left:0px!important;--content-right:0px!important;--content-top:0px!important;--content-bottom:54px!important;}
+.bigPicture .side,.bigPicture .pluginDock,.bigPicture #petLayer {display:none!important;}
+.bigPicture .library {padding:74px 5vw 32px;background:radial-gradient(ellipse at top left,#18364885,transparent 60%),#090f1b;backdrop-filter:none;}
+.bigPicture .libraryHead {margin-bottom:14px;}
+.bigPicture .library.netflixLibrary #categories {gap:12px;}
+.bigPicture .library.netflixLibrary #categories .cat {font-size:16px;padding:12px 20px;}
+.bigPicture .carouselHero {min-height:310px;max-height:45vh;}
+.bigPicture .carouselShelf {margin-top:30px;}
+.bigPicture .carouselHeading h2 {font-size:24px;}
+.bigPicture .carouselCard.portraitCard {min-width:190px;}
+.bigPicture .carouselCard.landscapeCard {min-width:300px;}
+.bigPicture .steamLandscapeGrid {grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:18px;}
+.bigPicture .steamLandscapeGrid .carouselCard {min-width:0;width:100%;}
+.bigPicture .libraryBody {min-width:0;overflow-x:hidden;}
+.bigPicture .cardFace,.bigPicture .exploreCard {scroll-margin:20px;}
+.bigPicture :is(button,input,select,textarea,summary):focus {outline:3px solid #7adfff!important;outline-offset:4px;box-shadow:0 0 0 7px #49c9f322!important;}
+.bigPicture .card:focus-within {border-color:#7adfff;}
+.bigPicture .heroInfo {bottom:85px;right:6vw;}
+.bigPicture #playBtn {font-size:20px;min-width:245px;min-height:64px;}
+.bigPicture .gameIntel {bottom:85px;}
+.bigPicture .dialog {font-size:16px;max-width:min(900px,88vw);}
+.bigPicture .dialog :is(button,input,select) {min-height:44px;}
+#bigPictureFooter[hidden] {display:none;}
+#bigPictureFooter {position:fixed;bottom:0;left:0;right:0;height:54px;display:flex;align-items:center;justify-content:space-between;gap:24px;padding:0 5vw;background:#0c1423f5;border-top:1px solid #ffffff12;z-index:30;font-size:12px;color:#a9bbd1;}
+#bigPictureFooter .bigPictureHints {display:flex;gap:18px;align-items:center;}
+.bigPictureHints b {display:inline-flex;justify-content:center;align-items:center;min-width:22px;height:22px;padding:2px;border-radius:6px;background:#233247;color:#d8f6ff;}
+#bigPictureFooter button {display:inline-flex;align-items:center;gap:9px;background:transparent;border:0;color:#d8f6ff;cursor:pointer;}
+#bigPictureMenu {z-index:150;}
+.bigPictureMenuDialog {display:flex;flex-direction:column;gap:12px;width:470px;}
+#bigPictureKeyboard {z-index:160;}
+.bigPictureKeyboardDialog {width:760px;}
+#bigPictureKeyboardValue {width:100%;padding:12px;border:1px solid #394c63;background:#1b2738;color:inherit;border-radius:10px;margin-bottom:18px;}
+.bigPictureKeys {display:grid;grid-template-columns:repeat(10,1fr);gap:10px;}
+.bigPictureKeys button {min-height:48px;background:#243044;border:1px solid #3a4c65;border-radius:8px;color:#eff9ff;cursor:pointer;font-size:19px;}
+.bigPictureKeyboardActions {display:flex;gap:12px;margin-top:22px;}
+@media(max-width:1000px){#bigPictureFooter {gap:10px;padding:0 22px;}.bigPictureHints {gap:9px!important;}#bigPicturePadStatus {display:none;}.bigPicture .library {padding-left:32px;padding-right:32px;}}
+@media(prefers-reduced-motion:reduce){.bigPicture * {transition:none!important;scroll-behavior:auto!important;}}

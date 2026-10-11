@@ -1,0 +1,64 @@
+'use strict';
+const testRuntime = require('./test-runtime.cjs'); testRuntime.prepare();
+const fs=require('node:fs'),path=require('node:path');
+const {chromium}=require('./test-runtime.cjs').playwright();
+const output=path.join(testRuntime.verificationRoot,'hytcg-frame-repair-ui');fs.mkdirSync(output,{recursive:true});
+const source=fs.readFileSync(path.join(testRuntime.projectRoot,'ui/hytcg-frame-repair.js'),'utf8');
+const pixel='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLbtAAAAABJRU5ErkJggg==';
+(async()=>{
+  const browser=await chromium.launch({channel:'msedge',headless:true}),page=await browser.newPage({viewport:{width:500,height:500}});let checks=0;
+  const check=(condition,label)=>{if(!condition)throw Error(label);checks++;};
+  await page.setContent('<!doctype html><html><body style="margin:0"><main id="tcgScroll" style="height:240px;overflow:auto"><div id="collectionGrid"></div></main></body></html>');
+  await page.evaluate(pixel=>{
+    window.tcg={view:'booster',collectionRequest:'collection-one',collection:[]};window.calls=[];window.pending=new Map();window.maximumOutstanding=0;
+    window.call=(type,payload)=>new Promise(resolve=>{const id=calls.length;calls.push({id,type,payload});pending.set(id,resolve);maximumOutstanding=Math.max(maximumOutstanding,pending.size);});
+    window.reply=(index,items)=>{pending.get(index)({items});pending.delete(index);};
+    const definitions=[['Common'],['Rare'],['Uncommon','window-v2'],['SSR'],['UR','full-v1'],['SR',null,false],['SR'],['Uncommon'],['Common','window-v3'],['SR','window-v3'],['SSR','full-v3'],['UR','full-v3'],['Common']];
+    for(let index=0;index<definitions.length;index++){
+      const [rarity,layout,source]=definitions[index],card={CardId:'card-'+index,Rarity:rarity,SourceImage:source===false?'http://invalid.example/art.png':'https://www.animecharactersdatabase.com/test-'+index+'.png',Metadata:layout?{hytcg_card_layout:layout}:['SSR','UR'].includes(rarity)?{}:{hytcg_card_layout:'window-v1'}};
+      tcg.collection.push({Card:card,ImagePath:'original-'+index,Thumbnail:'original-'+index});
+      if(index===12){const spacer=document.createElement('div');spacer.style.height='600px';collectionGrid.append(spacer);}
+      const node=document.createElement('article');node.dataset.collection='true';node.dataset.detail=String(index);node.style.height='20px';node.innerHTML='<img width="12" height="12" src="'+pixel+'">';collectionGrid.append(node);
+    }
+  },pixel);
+  await page.addScriptTag({content:source});
+  const repairPixel=await page.evaluate(()=>{const canvas=document.createElement('canvas');canvas.width=canvas.height=1;const context=canvas.getContext('2d');context.fillStyle='#52bfe4';context.fillRect(0,0,1,1);return canvas.toDataURL();});
+  await page.evaluate(()=>HyTcgFrameRepair.observe());await page.waitForTimeout(120);
+  check(await page.evaluate(()=>calls.length)===0,'Booster must not issue repair requests');
+  await page.evaluate(()=>{tcg.view='collection';HyTcgFrameRepair.observe();});
+  await page.waitForFunction(()=>calls.length===1);let call=await page.evaluate(()=>calls[0]);
+  check(call.type==='hytcgRepairCards','Repair uses expected native bridge');check(call.payload.cardIds.length===2,'First visible repair is a batch of two');
+  check(!call.payload.cardIds.includes('card-12'),'Offscreen card not fetched');
+  await page.waitForTimeout(120);check(await page.evaluate(()=>calls.length)===1,'Batch waits for preceding response');
+  await page.evaluate(({index,pixel})=>reply(index,calls[index].payload.cardIds.map(cardId=>({cardId,imageData:pixel}))),{index:0,pixel:repairPixel});
+  await page.waitForFunction(()=>calls.length===2);
+  check(await page.evaluate(()=>calls[1].payload.cardIds.length)<=2,'Following batch has at most two cards');
+  check(await page.evaluate(()=>maximumOutstanding)===1,'At most one repair batch outstanding');
+  await page.evaluate(({index,pixel})=>reply(index,calls[index].payload.cardIds.map(cardId=>({cardId,imageData:pixel}))),{index:1,pixel:repairPixel});
+  await page.waitForFunction(()=>calls.length===3);
+  check(await page.evaluate(()=>calls[2].payload.cardIds.length)<=2,'Third batch has at most two cards');
+  await page.evaluate(({index,pixel})=>reply(index,calls[index].payload.cardIds.map(cardId=>({cardId,imageData:pixel}))),{index:2,pixel:repairPixel});
+  await page.waitForFunction(pixel=>['card-0','card-1','card-3','card-4','card-6','card-7'].every(id=>tcg.collection.find(item=>item.Card.CardId===id).ImagePath===pixel),repairPixel);
+  let firstIds=await page.evaluate(()=>calls.flatMap(c=>c.payload.cardIds));
+  check(JSON.stringify([...firstIds].sort())===JSON.stringify(['card-0','card-1','card-3','card-4','card-6','card-7']),'Only eligible visible legacy cards repaired');
+  check(await page.evaluate(()=>tcg.collection[2].ImagePath)==='original-2','Headless window-v2 card requires no API repair');
+  check(await page.evaluate(pixel=>tcg.collection[3].ImagePath===pixel,repairPixel),'SSR without layout marker repaired');
+  check(await page.evaluate(pixel=>tcg.collection[4].ImagePath===pixel,repairPixel),'Legacy full-v1 UR repaired');
+  check(await page.evaluate(()=>tcg.collection[8].ImagePath)==='original-8','Current window-v3 Common ignored');
+  check(await page.evaluate(()=>tcg.collection[9].ImagePath)==='original-9','Current window-v3 SR ignored');
+  check(await page.evaluate(()=>tcg.collection[10].ImagePath)==='original-10','Current full-v3 SSR ignored');
+  check(await page.evaluate(()=>tcg.collection[11].ImagePath)==='original-11','Current full-v3 UR ignored');
+  check(await page.evaluate(()=>tcg.collection[5].ImagePath)==='original-5','Unsafe artwork source ignored');
+  check(await page.evaluate(pixel=>document.querySelector('[data-detail="0"] img').src===pixel&&tcg.collection[0].Thumbnail===pixel,repairPixel),'Thumbnail and displayed image update together');
+  await page.evaluate(()=>HyTcgFrameRepair.observe());await page.waitForTimeout(120);
+  check(await page.evaluate(()=>calls.length)===3,'Already attempted cards are not requested again');
+  await page.evaluate(()=>document.getElementById('tcgScroll').scrollTop=900);
+  await page.waitForFunction(()=>calls.length===4);
+  check(await page.evaluate(()=>calls[3].payload.cardIds.join(','))==='card-12','Offscreen card requested after entering view');
+  await page.evaluate(({index,pixel})=>{tcg.collectionRequest='collection-two';reply(index,calls[index].payload.cardIds.map(cardId=>({cardId,imageData:pixel})));},{index:3,pixel:repairPixel});
+  await page.waitForTimeout(120);
+  check(await page.evaluate(()=>tcg.collection[12].ImagePath)==='original-12','Stale collection response does not mutate model');
+  check(await page.evaluate(pixel=>document.querySelector('[data-detail="12"] img').src===pixel,pixel),'Stale response does not repaint DOM');
+  const report={Passed:true,Checks:checks,Cases:['booster no network','visible legacy low and high tiers','window-v2 no API repair','window-v3 and full-v3 ignored','batch size two','one outstanding batch','model and image update','scroll visibility','stale collection response'],Calls:await page.evaluate(()=>calls)};
+  fs.writeFileSync(path.join(output,'report.json'),JSON.stringify(report,null,2));await browser.close();process.stdout.write(JSON.stringify({Passed:true,Checks:checks}));
+})().catch(error=>{process.stderr.write(error.stack);process.exit(1);});

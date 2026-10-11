@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="180" height="64" viewBox="0 0 180 64" role="img" aria-label="UR rarity">
+  <defs>
+    <linearGradient id="metal" x1="0" y1="0" x2=".7" y2="1">
+      <stop stop-color="#ffe2f0"/><stop offset=".34" stop-color="#ec91bf"/><stop offset=".57" stop-color="#a23f76"/><stop offset=".81" stop-color="#ec91bf"/><stop offset="1" stop-color="#ffe2f0"/>
+    </linearGradient>
+    <linearGradient id="plaque" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#283346"/><stop offset=".48" stop-color="#151d2b"/><stop offset="1" stop-color="#0e1420"/>
+    </linearGradient>
+    <linearGradient id="sheen" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#ffffff" stop-opacity=".16"/><stop offset=".42" stop-color="#ffffff" stop-opacity="0"/><stop offset="1" stop-color="#ffffff" stop-opacity=".03"/>
+    </linearGradient>
+  </defs>
+  <rect x="1" y="1" width="178" height="62" rx="12" fill="#080d16" stroke="url(#metal)" stroke-width="2"/>
+  <rect x="5" y="5" width="170" height="54" rx="8.5" fill="url(#plaque)" stroke="#ec91bf" stroke-opacity=".32"/>
+  <path d="M13 7h154" stroke="#ffe2f0" stroke-opacity=".42" stroke-linecap="round"/>
+  <rect x="6" y="6" width="168" height="52" rx="8" fill="url(#sheen)"/>
+  <circle cx="31" cy="32" r="22" fill="#a23f76" fill-opacity=".13" stroke="#ec91bf" stroke-opacity=".18"/>
+  <path d="M31 10v8m0 28v8M9 32h7m30 0h7M15 16l6 6m20 20l6 6m0-32l-6 6m-20 20l-6 6" stroke="#f6b2d6" stroke-width="1.4" stroke-linecap="round"/><path d="M31 15l4.8 12.2L48 32l-12.2 4.8L31 49l-4.8-12.2L14 32l12.2-4.8z" fill="url(#metal)" stroke="#ffe4f2" stroke-width="1"/><path d="M31 21l2.8 8.2L42 32l-8.2 2.8L31 43l-2.8-8.2L20 32l8.2-2.8z" fill="#ffe9f5" fill-opacity=".76"/><circle cx="31" cy="32" r="2.5" fill="#ffffff"/>
+  <path d="M60 16v32" stroke="#ec91bf" stroke-opacity=".34"/>
+  <path d="M78 45h69" stroke="#ec91bf" stroke-opacity=".65"/><path d="M113 40l2 3 5 2-5 2-2 3-2-3-5-2 5-2z" fill="#ec91bf"/>
+  <text x="113" y="32" fill="#ffe2f0" font-family="Segoe UI,Arial,sans-serif" font-size="25" font-weight="750" text-anchor="middle" dominant-baseline="central" letter-spacing="1.4">UR</text>
+</svg>

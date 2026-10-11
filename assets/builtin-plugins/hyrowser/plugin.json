@@ -1,0 +1,8 @@
+{
+  "Id": "builtin.hyrowser",
+  "Name": "HYROWSER",
+  "Type": "hyrowser",
+  "IconPath": "../../icons/hyrowser.svg",
+  "Target": "https://www.google.com",
+  "Pinned": false
+}

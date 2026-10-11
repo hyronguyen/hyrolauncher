@@ -1,0 +1,12 @@
+{
+  "Id": "builtin.pet",
+  "Name": "PET",
+  "Type": "pet",
+  "IconPath": "../../icons/pet.svg",
+  "Target": "",
+  "Pinned": false,
+  "PetEnabled": true,
+  "PetSize": 78,
+  "PetStaySeconds": 60,
+  "PetColor": "#44A8FF"
+}

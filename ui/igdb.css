@@ -1,0 +1,44 @@
+.gameIntel { position:absolute; left:calc(var(--content-left) + 30px); bottom:calc(var(--content-bottom) + 30px); width:min(420px, calc(100% - var(--content-left) - var(--content-right) - 440px)); min-width:280px; z-index:6; border:1px solid rgba(255,255,255,.16); border-radius:18px; background:rgba(10,17,29,.88); color:#f5f7fc; box-shadow:0 15px 45px #0005; overflow:hidden; }
+.gameIntel[hidden], .stage.libraryMode .gameIntel, .stage.webMode .gameIntel { display:none; }
+.intelHead { display:flex; align-items:center; gap:6px; padding:10px 12px; border-bottom:1px solid #ffffff12; }
+.intelHead button { border:0; border-radius:8px; padding:7px 10px; background:transparent; color:#bac6da; font-size:12px; cursor:pointer; }
+.intelHead button.active { background:#ffffff15; color:#fff; }
+.intelHead .intelRefresh { margin-left:auto; }
+.intelBody { padding:12px 16px; height:135px; overflow:auto; font-size:12px; line-height:1.6; }
+.intelSummary { display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; margin:8px 0; color:#c6d0e2; }
+.intelTags { display:flex; flex-wrap:wrap; gap:6px; }
+.intelTags span { border-radius:6px; background:#ffffff12; padding:2px 7px; font-size:11px; }
+.intelLink { border:0; background:transparent; color:var(--accent); padding:0; font-size:12px; cursor:pointer; }
+.intelShots { display:flex; gap:9px; overflow:auto; }
+.intelShots button { padding:0; flex:0 0 180px; border:0; border-radius:9px; overflow:hidden; background:#182234; cursor:pointer; }
+.intelShots img { width:180px; aspect-ratio:16/9; object-fit:cover; display:block; }
+.gameIntel.collapsed .intelBody, .gameIntel.collapsed .intelAttribution { display:none; }
+.intelAttribution { padding:0 16px 9px; color:#7f90ac; font-size:10px; }
+.igdbSearchBar { display:flex; gap:10px; margin-bottom:14px; }
+.igdbSearchBar input { flex:1; min-width:0; }
+.igdbResults { overflow:auto; max-height:330px; display:grid; gap:8px; }
+.igdbResult { display:flex; gap:12px; padding:10px; border:1px solid #ffffff18; border-radius:12px; color:inherit; background:#ffffff06; cursor:pointer; text-align:left; align-items:center; }
+.igdbResult img { width:42px; height:56px; object-fit:cover; border-radius:6px; }
+.igdbResult small { display:block; margin-top:4px; color:#9eacc1; }
+#igdbViewer .dialog { width:960px; }
+#igdbViewerImage { display:block; width:100%; max-height:480px; object-fit:contain; border-radius:10px; background:#080d16; }
+#igdbViewer [hidden] { display:none; }
+#igdbLongText { white-space:pre-wrap; overflow:auto; max-height:370px; line-height:1.7; }
+.app.theme-light .gameIntel { background:rgba(242,246,252,.96); color:#182234; }
+.app.theme-light .intelSummary { color:#47566e; }
+.app.theme-light .intelHead button { color:#47566e; }
+.app.theme-light .intelHead button.active, .app.theme-light .intelTags span { background:#dce5f0; color:#182234; }
+.gameIntel {left:calc(var(--content-left) + 20px);bottom:calc(var(--content-bottom) + 24px);width:380px;max-width:calc(100% - var(--content-left) - var(--content-right) - 420px);border:0;border-radius:14px;background:linear-gradient(180deg,transparent,rgba(4,8,14,.96) 65%);box-shadow:none;}
+.intelVisual {height:170px;position:relative;overflow:hidden;border-radius:14px;}
+.intelVisual:empty {display:none;}
+.intelPreview {width:100%;height:100%;padding:0;border:0;background:#131d2b;cursor:pointer;}
+.intelPreview img {width:100%;height:100%;object-fit:cover;display:block;}
+.intelPreviewNav {position:absolute;right:9px;bottom:9px;display:flex;align-items:center;gap:8px;padding:3px 5px;border-radius:8px;background:#080f1dcc;font-size:10px;}
+.intelPreviewNav button {border:0;background:transparent;color:white;padding:0 5px;font-size:20px;cursor:pointer;}
+.intelHead {border:0;padding:8px 10px 0;gap:10px;}
+.intelHead button {position:relative;padding:8px 4px;border-radius:0;font-weight:700;}
+.intelHead button.active {background:transparent;}
+.intelHead button.active::after {content:'';position:absolute;left:4px;right:4px;bottom:0;height:2px;background:var(--game-accent);}
+.intelBody {height:118px;padding:10px 14px;}
+.intelSummary {-webkit-line-clamp:2;}
+.gameIntel.collapsed .intelVisual {display:none;}

@@ -1,0 +1,75 @@
+.shell.mp3Shell {padding:14px;gap:14px;background:radial-gradient(ellipse at 15% 0%,#9861c419,transparent 55%),var(--bg);}
+.musicHeader {display:flex;align-items:center;justify-content:space-between;gap:12px;}
+.musicEyebrow {font-size:9px;font-weight:650;letter-spacing:2px;color:var(--ui-muted);}
+.musicHeader h1 {font-size:20px;letter-spacing:-.5px;margin:4px 0 0;font-weight:650;color:var(--ui-text);}
+.musicAdd {display:flex;align-items:center;gap:7px;white-space:nowrap;min-height:36px!important;font-weight:600!important;font-size:12px;border-radius:11px!important;}
+.musicAdd svg {width:16px;height:16px;}
+.musicBody {min-height:0;overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column;gap:18px;scrollbar-width:none;padding-bottom:6px;}
+.musicBody::-webkit-scrollbar {display:none;}
+.musicPlayer {position:sticky;top:0;z-index:1;flex-shrink:0;display:grid;justify-items:center;gap:10px;padding:16px 20px 12px;border-radius:20px;border:1px solid var(--ui-line);background:radial-gradient(ellipse at 35% 0%,#ae5db555,transparent 60%),radial-gradient(ellipse at 100% 15%,#5e5ccb35,transparent 55%),linear-gradient(180deg,var(--ui-surface),var(--bg));overflow:hidden;color:var(--ui-text);}
+.musicPlayerTop {width:100%;display:flex;justify-content:space-between;gap:12px;font-size:9px;letter-spacing:1.7px;color:var(--ui-muted);}
+#musicStatus {letter-spacing:0;color:var(--accent);font-size:10px;}
+.musicRecord {width:132px;height:132px;border-radius:50%;display:grid;place-items:center;margin:1px 0;background:repeating-radial-gradient(circle,#141321 0px,#141321 2px,#343040 3px,#141321 4px);border:1px solid #ffffff30;box-shadow:0 16px 30px #0005,inset 0 0 22px #0008;animation:musicSpin 15s linear infinite;animation-play-state:paused;}
+.isPlaying .musicRecord {animation-play-state:running;}
+.musicRecordLabel {height:64px;width:64px;border-radius:50%;background:radial-gradient(circle at 25% 25%,#edb0d6,#a078d8 65%,#5a4d99);border:1px solid #ffffff66;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;box-shadow:inset 0 0 18px #fff3;}
+.musicRecordLabel svg {width:23px;height:23px;}
+.musicRecordLabel span {font-size:7px;letter-spacing:2px;margin-left:2px;font-weight:700;}
+.musicSong {width:100%;text-align:center;min-width:0;}
+.musicSong h2 {margin:0;font-size:19px;font-weight:650;letter-spacing:-.4px;line-height:1.35;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.musicSong p {margin:4px 0 0;font-size:11px;color:var(--ui-muted);}
+.musicSeek {width:100%;display:grid;gap:1px;}
+.musicSeek input,.musicBottom input {padding:0!important;height:18px!important;min-height:0!important;background:transparent!important;border:0!important;box-shadow:none!important;accent-color:var(--accent);cursor:pointer;}
+.musicSeek>div {display:flex;justify-content:space-between;font-size:10px;color:var(--ui-muted);font-variant-numeric:tabular-nums;}
+.musicControls {display:flex;align-items:center;justify-content:center;gap:clamp(10px,4vw,24px);width:100%;}
+.musicControls button,.musicBottom button,.musicTrackDelete {border:0!important;box-shadow:none!important;display:grid;place-items:center;position:relative;padding:0!important;flex-shrink:0;}
+.musicIconButton {width:32px;min-width:32px!important;height:32px;min-height:32px!important;background:transparent!important;color:var(--ui-muted);border-radius:10px!important;}
+.musicIconButton svg {width:20px;height:20px;}
+.musicIconButton:hover {color:var(--ui-text);background:var(--ui-field)!important;}
+.musicIconButton.active {color:var(--accent);}
+.musicIconButton.active::after {content:'';position:absolute;bottom:0;width:3px;height:3px;background:var(--accent);border-radius:50%;}
+.musicIconButton sup {position:absolute;left:13px;top:9px;font-size:8px;line-height:1;color:var(--accent);background:var(--ui-surface);}
+.musicPlay {width:48px;min-width:48px!important;height:48px;min-height:48px!important;border-radius:50%!important;background:var(--ui-text)!important;color:var(--bg)!important;transition:transform .15s;}
+.musicPlay:hover {transform:scale(1.05);}
+.musicPlay svg {width:22px;height:22px;}
+.musicPlay:disabled,.musicIconButton:disabled {opacity:.35;cursor:default;}
+.musicBottom {display:flex;align-items:center;width:100%;gap:6px;color:var(--ui-muted);}
+.musicBottom .musicIconButton {width:26px;min-width:26px!important;}
+.musicBottom svg {width:16px;height:16px;}
+.musicBottom input {width:72px;min-width:40px;}
+#musicVolumeValue {font-size:10px;min-width:30px;font-variant-numeric:tabular-nums;}
+.musicRepeatLabel {margin-left:auto;font-size:10px;white-space:nowrap;}
+.musicQueue {display:flex;flex-direction:column;gap:10px;min-height:120px;flex:1;color:var(--ui-text);}
+.musicQueueHeading {display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.musicQueueHeading h2 {margin:0;font-size:14px;font-weight:600;}
+.musicQueueHeading>span {font-size:10px;color:var(--ui-muted);}
+.musicSearch {display:flex;align-items:center;gap:8px;padding:0 10px;min-height:34px;border:1px solid var(--ui-line);border-radius:10px;background:var(--ui-field);}
+.musicSearch svg {width:15px;height:15px;flex-shrink:0;color:var(--ui-muted);}
+.musicSearch input {height:32px!important;min-height:32px!important;border:0!important;background:transparent!important;box-shadow:none!important;padding:0!important;border-radius:0!important;font-size:12px;min-width:0;color:var(--ui-text);}
+.musicTracks {display:flex;flex-direction:column;gap:5px;}
+.musicTrack {display:flex;align-items:center;gap:4px;min-height:58px;border:1px solid transparent;border-radius:12px;padding-right:7px;}
+.musicTrack:hover {background:var(--ui-field);}
+.musicTrack.selected {background:color-mix(in srgb,var(--accent) 8%,var(--ui-surface));border-color:color-mix(in srgb,var(--accent) 20%,transparent);}
+.musicTrackFace {min-width:0;flex:1;display:flex;align-items:center;gap:11px;padding:8px!important;min-height:56px;border:0!important;background:transparent!important;box-shadow:none!important;color:var(--ui-text);text-align:left;}
+.musicTrackArt {height:38px;width:38px;flex-shrink:0;border:1px solid var(--ui-line);border-radius:10px;display:flex;align-items:center;justify-content:center;gap:3px;background:linear-gradient(135deg,#a37bd522,#b064bc11),var(--ui-field);color:var(--accent);}
+.musicTrackArt svg {width:17px;height:17px;}
+.musicTrackArt i {height:14px;width:3px;background:currentColor;animation:musicBars .8s ease-in-out alternate infinite;border-radius:2px;}
+.musicTrackArt i:nth-child(2) {animation-delay:-.4s;height:22px;}
+.musicTrackArt i:nth-child(3) {animation-delay:-.2s;height:10px;}
+.musicTrackText {min-width:0;flex:1;display:grid;gap:4px;}
+.musicTrackText strong {font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.musicTrackText small {font-size:10px;font-weight:400;color:var(--ui-muted);}
+.musicTrackTime {color:var(--ui-muted);font-size:10px;font-weight:400;font-variant-numeric:tabular-nums;}
+.musicTrackDelete {width:30px;min-width:30px!important;height:30px;min-height:30px!important;background:transparent!important;border-radius:8px!important;color:var(--ui-muted);opacity:.65;}
+.musicTrackDelete:hover {color:#e7778c;opacity:1;background:#e7778c15!important;}
+.musicTrackDelete svg {width:15px;height:15px;}
+.musicEmpty {text-align:center;color:var(--ui-muted);padding:22px 14px;}
+.musicEmpty>svg {height:30px;width:30px;color:var(--accent);}
+.musicEmpty h3 {margin:10px 0 6px;font-size:13px;font-weight:600;color:var(--ui-text);}
+.musicEmpty p,.musicFeedback {margin:0;font-size:11px;line-height:1.6;color:var(--ui-muted);}
+.musicFeedback:empty {display:none;}
+@keyframes musicSpin {to{transform:rotate(360deg)}}
+@keyframes musicBars {to{transform:scaleY(.35)}}
+@media (min-width:650px) {.musicBody{display:grid;grid-template-columns:minmax(250px,1fr) minmax(220px,1fr);align-items:start}.musicPlayer{position:sticky;top:0}.musicRecord{width:170px;height:170px}.musicRecordLabel{width:82px;height:82px}}
+@media (max-width:370px) {.musicRepeatLabel{font-size:9px}.musicPlayer{padding:14px}.musicBottom input{width:48px}.musicHeader h1{font-size:18px}}
+@media (max-height:620px) and (max-width:649px) {.musicRecord{width:94px;height:94px}.musicRecordLabel{width:50px;height:50px}.musicRecordLabel svg{width:19px;height:19px}.musicPlayer{gap:6px;padding:12px 16px}.musicSong h2{font-size:17px}.musicSong p{margin-top:2px}.musicPlay{height:42px;min-height:42px!important;width:42px;min-width:42px!important}.musicBody{gap:12px}}
+@media (prefers-reduced-motion:reduce) {.musicRecord,.musicTrackArt i{animation:none}}

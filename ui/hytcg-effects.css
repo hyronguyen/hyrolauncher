@@ -1,0 +1,18 @@
+/* The transparent aura and image share a transform and a centre. No glow is
+   attached to the stage, dialog, or album pocket. The image clips its own art. */
+.mysticAttached { position:relative; isolation:isolate; overflow:visible; background:transparent; box-shadow:none; }
+.mysticAura { position:absolute; display:block; left:-28px; top:-28px; width:calc(100% + 56px); height:calc(100% + 56px); max-width:none; pointer-events:none; z-index:0; border-radius:inherit; }
+.mysticPlane { display:block; position:relative; width:100%; height:100%; border-radius:inherit; isolation:isolate; overflow:visible; pointer-events:none; }
+.mysticPlane>.cardSurface,.mysticAttached>img { position:relative; z-index:1; }
+[data-tilt].mysticAttached>.mysticPlane { transform:translateZ(var(--tilt-lift)) rotateX(var(--rotate-x)) rotateY(var(--rotate-y)); transform-origin:center; backface-visibility:hidden; transition:transform .38s cubic-bezier(.2,.7,.2,1); }
+[data-tilt].mysticAttached.isInteracting>.mysticPlane { transition:transform .1s ease-out; will-change:transform; }
+[data-tilt].mysticAttached .cardSurface { transform:none; transition:box-shadow .3s; will-change:auto; }
+.lifeStudioPreview.mysticAttached { overflow:visible; }
+.lifeStudioPreview.mysticAttached>img { border-radius:inherit; }
+.detailStage { padding:20px 20px 14px; }
+.detailCard { flex:none; }
+html[data-card-effects="off"] .mysticAura { display:none; }
+html[data-card-effects="off"] [data-tilt].mysticAttached>.mysticPlane { transform:none; will-change:auto; transition:none; }
+@media(min-width:680px) { .detailStage { padding:24px 22px 20px; } .detailCard { width:min(100%,360px,calc((100dvh - 205px)*5/7)); } }
+@media(max-width:380px) { .detailStage { padding:20px 17px 14px; } }
+@media(prefers-reduced-motion:reduce) { [data-tilt].mysticAttached>.mysticPlane { transition:none!important; } }

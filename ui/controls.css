@@ -1,0 +1,116 @@
+:root {
+  --ui-surface: #151a24;
+  --ui-field: #1e2531;
+  --ui-hover: #283242;
+  --ui-line: #303a49;
+  --ui-text: #eef2f8;
+  --ui-muted: #9aa9bc;
+  --ui-radius: 10px;
+}
+body.theme-light {
+  --bg: #f8fafc;
+  --panel: #eef2f7;
+  --text: #172033;
+  --muted: #64748b;
+  --ui-surface: #f8fafc;
+  --ui-field: #eef2f7;
+  --ui-hover: #e2e8f0;
+  --ui-line: #cbd5e1;
+  --ui-text: #172033;
+  --ui-muted: #64748b;
+}
+.dialog { color: var(--ui-text); background: var(--ui-surface); border: 1px solid var(--ui-line); border-radius: 18px; padding: 24px; scroll-padding-bottom: 90px; }
+.dialog h2 { font-size: 22px; font-weight: 650; letter-spacing: -.4px; margin-bottom: 24px; }
+.dialog :is(.formGrid, .settingRow) { column-gap: 16px; }
+.dialog .formGrid { grid-template-columns: 114px minmax(0, 1fr) 40px; row-gap: 12px; padding-bottom: 12px; }
+.dialog .settingRow { grid-template-columns: 146px minmax(0, 1fr); margin-bottom: 14px; }
+:is(.dialog, .shell) label { font-size: 13px; font-weight: 500; color: var(--ui-text); line-height: 1.45; }
+:is(.dialog, .shell) :is(input, select, textarea) { min-width: 0; font-size: 13px; color: var(--ui-text); border: 1px solid var(--ui-line); border-radius: var(--ui-radius); background-color: var(--ui-field); outline: none; box-shadow: none; }
+:is(.dialog, .shell) input:not([type=checkbox]):not([type=range]):not([type=color]), :is(.dialog, .shell) select { width: 100%; height: 40px; padding: 0 12px; }
+:is(.dialog, .shell) select { appearance: none; padding-right: 34px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%239aa9bc' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-size: 16px; background-position: right 12px center; }
+:is(.dialog, .shell) select option { background: var(--ui-field); color: var(--ui-text); }
+:is(.dialog, .shell) :is(input, select, textarea):hover:not(:disabled) { border-color: #58667c; }
+:is(.dialog, .shell) :is(input, select, textarea):focus-visible { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 15%, transparent); }
+:is(.dialog, .shell) :is(input, select):disabled { opacity: .5; cursor: not-allowed; }
+:is(.dialog, .shell) input::placeholder { color: var(--ui-muted); }
+:is(.dialog, .shell) input[type=checkbox] { appearance: none; width: 20px; height: 20px; padding: 0; margin: 0; flex: 0 0 20px; justify-self: start; border-radius: 6px; cursor: pointer; background: var(--ui-field); }
+:is(.dialog, .shell) input[type=checkbox]:checked { background-color: var(--accent); border-color: var(--accent); background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230b1520' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m5 12 4 4L19 6'/%3E%3C/svg%3E"); background-size: 16px; background-position: center; background-repeat: no-repeat; }
+:is(.dialog, .shell) input[type=range] { appearance: auto; accent-color: var(--accent); width: 100%; height: 24px; padding: 0; border: 0; background: transparent; box-shadow: none; cursor: pointer; }
+:is(.dialog, .shell) input[type=color] { width: 48px; height: 40px; padding: 5px; cursor: pointer; }
+:is(.dialog, .shell) input[type=color]::-webkit-color-swatch-wrapper { padding: 0; }
+:is(.dialog, .shell) input[type=color]::-webkit-color-swatch { border: 0; border-radius: 5px; }
+:is(.dialog, .shell) :is(.primary, .ghost, .danger, .smallAction, .browse, button.small), .library:not(.netflixLibrary) :is(.smallAction, .addCat) { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 36px; min-width: 0; padding: 0 14px; border: 1px solid var(--ui-line); border-radius: var(--ui-radius); color: var(--ui-text); background: var(--ui-field); font-size: 13px; font-weight: 600; box-shadow: none; backdrop-filter: none; cursor: pointer; }
+:is(.dialog, .shell) button.primary { background: var(--accent); border-color: var(--accent); color: #07151d; }
+:is(.dialog, .shell) button.danger { background: #a52f3a; border-color: #c34550; color: #fff; }
+:is(.dialog, .shell) :is(.primary, .ghost, .danger, .smallAction, .browse, button.small):hover:not(:disabled) { filter: brightness(1.1); transform: none; }
+:is(.dialog, .shell) button:focus-visible, .library button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+:is(.dialog, .shell) button:disabled { opacity: .45; cursor: not-allowed; }
+.dialog .browse { padding: 0; width: 40px; height: 40px; font-size: 16px; }
+.dialog .dialogActions { bottom: -24px; margin: 16px -24px -24px; padding: 16px 24px; background: var(--ui-surface); border-top: 1px solid var(--ui-line); border-radius: 0 0 18px 18px; gap: 10px; }
+.dialog .dialogActions > :is(.primary, .ghost, .danger) { min-height: 40px; padding: 0 20px; }
+.dialog .dialogActions > .primary { min-width: 110px; }
+.dialog .settingsTabs { display: flex; gap: 4px; width: fit-content; padding: 4px; margin-bottom: 24px; border: 1px solid var(--ui-line); border-radius: 12px; background: var(--ui-field); }
+.dialog .settingsTab { height: 34px; padding: 0 16px; border-radius: 8px; font-size: 13px; font-weight: 600; color: var(--ui-muted); background: transparent; }
+.dialog .settingsTab.active { background: var(--accent); color: #07151d; }
+.dialog .note { color: var(--ui-muted); font-size: 11px; line-height: 1.6; margin-top: -6px; }
+.dialog .htmlGameActions { margin-top: 0; }
+.dialog .htmlGameActions .smallAction { min-height: 30px; padding: 0 10px; font-size: 12px; }
+.dialog .systemItem { padding: 16px; border-radius: 12px; background: var(--ui-field); border-color: var(--ui-line); }
+.dialog .systemItem.storage { background: color-mix(in srgb, var(--accent) 5%, var(--ui-field)); }
+.dialog .systemLabel { color: var(--ui-muted); font-weight: 500; margin-bottom: 8px; }
+.dialog .systemValue { font-size: 14px; font-weight: 600; line-height: 1.45; }
+.dialog .systemSection { color: var(--ui-text); font-size: 13px; font-weight: 600; padding-top: 4px; }
+.dialog .systemActionBar { gap: 8px; }
+.dialog .systemActionBar :is(.smallAction, .danger) { min-height: 36px; padding: 0 12px; font-size: 12px; border-radius: var(--ui-radius); }
+.shell .editor { border: 1px solid var(--ui-line); border-radius: 12px; background: var(--ui-surface); }
+.shell .title { font-weight: 650; }
+.shell .sub { font-weight: 400; color: var(--ui-muted); }
+body.theme-light .shell :is(.hero, .card, .site) { background: var(--ui-field); border-color: var(--ui-line); }
+body.theme-light .shell .movieSitesBlock[open] { background: var(--ui-surface); }
+.library:not(.netflixLibrary) { gap: 18px; }
+.library:not(.netflixLibrary) .libraryHead { display: grid; grid-template-columns: minmax(190px, 1fr) auto; align-items: center; gap: 14px; max-width: none; }
+.library:not(.netflixLibrary) .searchWrap { width: 100%; }
+.library:not(.netflixLibrary) .search { height: 40px; border-radius: var(--ui-radius); background: var(--ui-field); border-color: var(--ui-line); color: var(--ui-text); font-size: 13px; }
+.library:not(.netflixLibrary) .search:focus { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 12%, transparent); }
+.library:not(.netflixLibrary) #categories { gap: 6px; flex-wrap: nowrap; }
+.library:not(.netflixLibrary) #categories .cat { height: 36px; min-width: 0; padding: 0 12px; border-radius: var(--ui-radius); font-size: 12px; font-weight: 600; background: transparent; color: var(--ui-muted); white-space: nowrap; }
+.library:not(.netflixLibrary) #categories .cat.active { background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--accent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent); }
+.defaultGroup { appearance: none; height: 36px; max-width: 135px; border: 1px solid var(--ui-line); border-radius: var(--ui-radius); padding: 0 28px 0 10px; background: var(--ui-field) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239aa9bc' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") right 8px center / 14px no-repeat; color: var(--ui-text); font-size: 12px; }
+.defaultGroup option { background: var(--ui-field); color: var(--ui-text); }
+.libraryTools { display: flex; align-items: center; gap: 6px; border-left: 1px solid var(--ui-line); padding-left: 10px; margin-left: 4px; }
+.library:not(.netflixLibrary) .libraryTools .smallAction { height: 36px; padding: 0 10px; font-size: 12px; }
+.libraryTools .iconOnly { width: 36px; padding: 0 !important; }
+@media (max-width: 1120px) { .library:not(.netflixLibrary) .libraryHead { grid-template-columns: 1fr; gap: 10px; } .library:not(.netflixLibrary) #categories { flex-wrap: wrap; } .libraryTools { margin-left: auto; } }
+.dialog .accentIcon { background: transparent; border: 0; border-radius: 0; padding: 0; min-height: 0; min-width: 0; flex-shrink: 0; box-shadow: none; }
+.dialog .accentIcon.small { width: 18px; height: 18px; }
+.dialog #editHeroLayoutBtn { width: 100%; height: 40px; white-space: nowrap; }
+.appDialogLayer { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; padding: 20px; background: rgba(3,7,14,.72); }
+.appDialog { width: min(440px, 100%); max-height: calc(100vh - 40px); }
+.appDialog h2 { margin-bottom: 14px; font-size: 19px; }
+.appDialogMessage { margin: 0 0 20px; color: var(--ui-muted); white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.6; font-size: 14px; }
+.appDialogInput { margin-bottom: 20px; }
+.appDialogButtons { display: flex; justify-content: flex-end; gap: 8px; }
+.appDialogButtons button { min-width: 84px !important; height: 38px; }
+.shell .movieTools { position: static; grid-template-columns: minmax(0,1fr); padding: 0; background: transparent; }
+.shell .movieSitesBlock { border-radius: 10px; border-color: var(--ui-line); background: var(--ui-field); }
+.shell .movieSitesBlock summary { font-size: 12px; height: 36px; justify-content: flex-start; gap: 8px; color: var(--ui-muted); }
+.shell .movieSitesBlock summary span { border-radius: 5px; background: var(--ui-hover); padding: 2px 6px; font-size: 11px; }
+.shell .movieSitesBlock summary::after { margin-left: auto; }
+.shell .movieSitesBlock[open] { padding-bottom: 4px; box-shadow: none; background: var(--ui-field); backdrop-filter: none; }
+.shell .movieSitesBlock .sites { padding: 6px; }
+.shell .movieGrid { grid-template-columns: repeat(auto-fill, minmax(135px, 1fr)); gap: 12px; align-items: start; }
+.shell .movieTile { aspect-ratio: auto; border-radius: 12px; background: var(--ui-field); border: 1px solid var(--ui-line); overflow: hidden; transform: none; box-shadow: none; }
+.shell .movieTile:hover { border-color: var(--accent); transform: none; box-shadow: none; }
+.shell .movieTile::after { display: none; }
+.shell .moviePoster { position: relative; inset: auto; aspect-ratio: 2 / 3; width: 100%; background: var(--ui-hover); }
+.shell .moviePoster img { display: block; object-fit: cover; }
+.shell .movieOverlay { position: static; padding: 11px; min-height: 0; transform: none; }
+.shell .movieTitle { color: var(--ui-text); font-size: 13px; font-weight: 600; min-height: 32px; line-height: 1.3; text-shadow: none; }
+.shell .movieEpisode { color: var(--ui-muted); font-weight: 400; margin-top: 6px; font-size: 12px; min-height: 16px; }
+.shell .movieActions { opacity: 1; transform: none; margin-top: 10px; gap: 6px; }
+.shell .movieActions button.small { min-height: 30px; padding: 0 6px; font-size: 11px; border-radius: 7px; backdrop-filter: none; }
+.shell .movieActions button.small:first-child { background: var(--accent); color: #07151d; border-color: var(--accent); }
+.shell .movieTile:focus-within { border-color: var(--accent); }
+.shell .movieShell .editor { padding: 16px; }
+.shell .movieShell .row { grid-template-columns: 95px minmax(0,1fr); }
+.shell .movieShell .actions { padding-top: 8px; }

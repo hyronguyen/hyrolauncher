@@ -1,0 +1,8 @@
+{
+  "Id": "builtin.hytcg",
+  "Name": "HYTCG",
+  "Type": "hytcg",
+  "IconPath": "../../icons/hytcg.svg",
+  "Target": "",
+  "Pinned": false
+}

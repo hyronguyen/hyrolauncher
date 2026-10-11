@@ -1,0 +1,8 @@
+{
+  "Id": "builtin.movie-watchlist",
+  "Name": "Movie Watchlist",
+  "Type": "movie-watchlist",
+  "IconPath": "../../icons/popcorn.svg",
+  "Target": "",
+  "Pinned": false
+}

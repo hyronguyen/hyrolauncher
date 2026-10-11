@@ -1,0 +1,8 @@
+{
+  "Id": "builtin.mp3",
+  "Name": "MP3 Player",
+  "Type": "mp3",
+  "IconPath": "../../icons/music.svg",
+  "Target": "",
+  "Pinned": false
+}

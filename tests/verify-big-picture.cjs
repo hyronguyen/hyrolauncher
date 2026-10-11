@@ -1,0 +1,17 @@
+const testRuntime = require('./test-runtime.cjs'); testRuntime.prepare();
+const fs=require('fs'),vm=require('vm'),assert=require('assert');
+const handlers={},classes=new Set(),footer={hidden:true},status={textContent:''};let renders=0;
+const c={state:{Settings:{LibraryLayout:'default',Language:'en'}},document:{addEventListener:(name,fn)=>handlers[name]=fn,body:{classList:{toggle:(name,on)=>on?classes.add(name):classes.delete(name)}},getElementById:id=>id==='bigPictureFooter'?footer:id==='bigPicturePadStatus'?status:id==='bigPictureButton'?{}:null,querySelectorAll:()=>[],querySelector:()=>null,visibilityState:'visible',hasFocus:()=>true},navigator:{getGamepads:()=>[]},post:msg=>c.sent=msg,igdbText:(vi,en)=>en,cancelAnimationFrame(){},requestAnimationFrame:()=>1,render:()=>renders++,showLibrary(){},HTMLElement:class{},console};
+c.window={addEventListener:(name,fn)=>handlers[name]=fn};
+vm.createContext(c);vm.runInContext(fs.readFileSync('ui/big-picture.js','utf8'),c);const run=s=>vm.runInContext(s,c);
+assert(!run('isCarouselLayout()'));run('bigPictureActive=true');assert(run('isCarouselLayout()'));assert.equal(c.state.Settings.LibraryLayout,'default');run('bigPictureActive=false');assert(!run('isCarouselLayout()'));
+c.origin={left:0,top:0,width:100,height:100};c.candidates=[{element:'right',rect:{left:110,top:0,width:100,height:100}},{element:'down',rect:{left:0,top:110,width:100,height:100}},{element:'diagonal',rect:{left:80,top:180,width:100,height:100}}];
+assert.equal(run("chooseSpatialTarget(origin,candidates,'right')"),'right');assert.equal(run("chooseSpatialTarget(origin,candidates,'down')"),'down');assert.equal(run("chooseSpatialTarget(origin,candidates,'left')"),null);
+let actions=[];c.moveBigPicture=d=>actions.push(d);c.activateBigPicture=()=>actions.push('accept');c.bigPictureBack=()=>actions.push('back');c.bigPictureSearch=()=>actions.push('search');c.openBigPictureMenu=()=>actions.push('menu');
+c.pad={buttons:Array.from({length:16},()=>({pressed:false})),axes:[0,0]};c.pad.buttons[0].pressed=true;run('processBigPicturePad(pad,0);processBigPicturePad(pad,500)');assert.deepEqual(actions,['accept'],'held A must not double activate');c.pad.buttons[0].pressed=false;run('processBigPicturePad(pad,510)');c.pad.buttons[0].pressed=true;run('processBigPicturePad(pad,520)');assert.equal(actions.length,2);
+actions=[];c.pad.buttons[0].pressed=false;c.pad.axes=[.6,0];run('processBigPicturePad(pad,600);processBigPicturePad(pad,900);processBigPicturePad(pad,951)');assert.deepEqual(actions,['right','right'],'analog repeat delay');
+const mapped=run('nativeToGamepad({buttons:4096|8192|8|16,x:.75,y:-.75})');assert(mapped.buttons[0].pressed && mapped.buttons[1].pressed && mapped.buttons[15].pressed && mapped.buttons[9].pressed);assert.equal(mapped.axes[1],-.75);
+run('toggleBigPicture()');assert.equal(c.sent.type,'setBigPicture');assert.equal(c.sent.enabled,true);
+run('bigPictureActive=true;startBigPicturePolling()');assert.equal(run('bigPictureFrame'),1);handlers.blur();assert.equal(run('bigPictureFrame'),0);assert.equal(run('bigPictureHeld.size'),0);handlers.focus();assert.equal(run('bigPictureFrame'),1);
+const inline=fs.readFileSync('ui/index.html','utf8').match(/<script>([\s\S]*?)<\/script>/)[1];new vm.Script(inline);
+console.log('PASS: Big Picture temporary Carousel override, spatial navigation, analog repeat/deadzone, A edge activation, XInput mapping, native fullscreen request and syntax.');

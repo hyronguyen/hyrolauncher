@@ -1,0 +1,8 @@
+{
+  "WebView2": {
+    "Version": "1.0.2365.46",
+    "PackageUrl": "https://api.nuget.org/v3-flatcontainer/microsoft.web.webview2/1.0.2365.46/microsoft.web.webview2.1.0.2365.46.nupkg",
+    "CatalogUrl": "https://api.nuget.org/v3/catalog0/data/2024.02.26.18.00.50/microsoft.web.webview2.1.0.2365.46.json",
+    "Sha512": "JTguDuhy2e2m/J+U0taLWyoqtCmkuXZr8GFhlzsVKO45BSqCilojiydeIVDQBWfXD3A+iGwrxb/MqhABfhQyuw=="
+  }
+}

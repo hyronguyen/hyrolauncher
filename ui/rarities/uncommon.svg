@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="180" height="64" viewBox="0 0 180 64" role="img" aria-label="Uncommon rarity">
+  <defs>
+    <linearGradient id="metal" x1="0" y1="0" x2=".7" y2="1">
+      <stop stop-color="#d5ffe9"/><stop offset=".34" stop-color="#6ed4a5"/><stop offset=".57" stop-color="#287b58"/><stop offset=".81" stop-color="#6ed4a5"/><stop offset="1" stop-color="#d5ffe9"/>
+    </linearGradient>
+    <linearGradient id="plaque" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#283346"/><stop offset=".48" stop-color="#151d2b"/><stop offset="1" stop-color="#0e1420"/>
+    </linearGradient>
+    <linearGradient id="sheen" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#ffffff" stop-opacity=".16"/><stop offset=".42" stop-color="#ffffff" stop-opacity="0"/><stop offset="1" stop-color="#ffffff" stop-opacity=".03"/>
+    </linearGradient>
+  </defs>
+  <rect x="1" y="1" width="178" height="62" rx="12" fill="#080d16" stroke="url(#metal)" stroke-width="2"/>
+  <rect x="5" y="5" width="170" height="54" rx="8.5" fill="url(#plaque)" stroke="#6ed4a5" stroke-opacity=".32"/>
+  <path d="M13 7h154" stroke="#d5ffe9" stroke-opacity=".42" stroke-linecap="round"/>
+  <rect x="6" y="6" width="168" height="52" rx="8" fill="url(#sheen)"/>
+  <circle cx="31" cy="32" r="22" fill="#287b58" fill-opacity=".13" stroke="#6ed4a5" stroke-opacity=".18"/>
+  <path d="M29 46C16 38 17 24 39 17c2 16-1 29-10 29z" fill="url(#metal)" stroke="#b7f8d5" stroke-width="1"/><path d="M25 43l11-19m-9 13l-4-6m8 0l5 1" fill="none" stroke="#154a36" stroke-width="1.6" stroke-linecap="round"/><path d="M23 47c-5-4-9-10-9-17" fill="none" stroke="#6ed4a5" stroke-width="1.2" stroke-linecap="round"/>
+  <path d="M60 16v32" stroke="#6ed4a5" stroke-opacity=".34"/>
+  <path d="M72 44h73" stroke="#6ed4a5" stroke-opacity=".5"/><path d="M82 48h51" stroke="#6ed4a5" stroke-opacity=".25"/>
+  <text x="113" y="32" fill="#d5ffe9" font-family="Segoe UI,Arial,sans-serif" font-size="16.5" font-weight="750" text-anchor="middle" dominant-baseline="central" letter-spacing=".15">Uncommon</text>
+</svg>

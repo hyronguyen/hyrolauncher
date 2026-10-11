@@ -1,0 +1,8 @@
+{
+  "CharacterIdMin": 1,
+  "CharacterIdMax": 1000000,
+  "MaxCharacterAttempts": 15,
+  "Concurrency": 2,
+  "RequestTimeoutSeconds": 12,
+  "RetryDelayMs": 300
+}

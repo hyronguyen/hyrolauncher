@@ -1,0 +1,15 @@
+{
+  "name": "hyrolauncher-ui-tests",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Optional browser verification tools; the launcher itself requires no Node.js runtime.",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "test": "node tests/run-smoke.cjs",
+    "test:cards": "node tests/verify-hytcg-canvas-portrait.cjs",
+    "test:studio": "node tests/verify-hytcg-studio-position-ui.cjs",
+    "test:bookshelf": "node tests/verify-bookshelf-ui.cjs",
+    "test:mystic": "node tests/verify-hytcg-mystic-ui.cjs"
+  },
+  "devDependencies": { "playwright": "1.62.1" }
+}

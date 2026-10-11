@@ -1,0 +1,50 @@
+const testRuntime = require('./test-runtime.cjs'); testRuntime.prepare();
+const fs = require('fs'), vm = require('vm'), assert = require('assert');
+const main = fs.readFileSync('ui/index.html','utf8').match(/<script>([\s\S]*?)<\/script>/)[1];
+const classes = {toggle(){}, remove(){}, contains(){return false;}};
+const steamGrid = {style:{}};
+const nodes = {steamLibrary:{}, library:{classList:classes}, grid:{style:{},classList:classes}, libraryBody:{clientWidth:1100}, search:{value:''}, categories:{children:[],insertBefore(button){this.children.push(button);}}};
+const sent=[], sounds=[];
+const c = {state:{Games:[],Settings:{SteamId:'76561198000000000',Language:'en',LibraryLayout:'carousel',MaxGridColumns:3}},selectedGame:null,runningIds:new Set(),currentCategory:'All',assets:{logo:'logo'},
+ document:{getElementById:id=>nodes[id],createElement:()=>({}),querySelector:selector=>selector==='.steamDefaultGrid'?steamGrid:{classList:classes}},
+ escapeHtml:s=>String(s||'').replace(/</g,'&lt;').replace(/"/g,'&quot;'),iconHtml:()=>'',labelWithIcon:s=>s,tr:s=>s,isPrivateLocked:g=>!!g.Private,isMovieWebsite:()=>false,
+ displayName:g=>g.Private?'Private':g.Name,displayIcon:g=>g.IconPath,img:(p,f)=>p||f,sortLibraryGames:games=>games.slice(),clampInt:(n,d,min,max)=>Math.max(min,Math.min(max,n||d)),
+ uiEffects:{play:k=>sounds.push(k)},post:m=>sent.push(m),selectCategory:k=>c.currentCategory=k,ensurePrivateAccess:()=>true,applyTheme(){},render(){}};
+c.isCarouselLayout=()=>c.state.Settings.LibraryLayout==='carousel';c.bigPictureActive=false;
+vm.createContext(c);
+vm.runInContext(fs.readFileSync('ui/steam-library.js','utf8'),c);
+for(const [start,end] of [['function libraryCard(', 'let carouselFeaturedId'],['function layoutGrid(', 'function getSidebarGames('],['function selectGame(', 'function showLibrary('],['function launchSelected(', 'function toggleWebFullscreen(']]) vm.runInContext(main.slice(main.indexOf(start),main.indexOf(end,main.indexOf(start))),c);
+vm.runInContext(`steamLibrary={steamId:state.Settings.SteamId,status:'ready',profile:{Name:'<Account>',Avatar:'https://avatar'},games:[{AppId:10,Name:'<Game A>',Image:'header',PlaytimeMinutes:120},{AppId:20,Name:'Game B',Image:'header',PlaytimeMinutes:0}]};renderSteamLibrary();steamNavigation();`,c);
+assert(nodes.steamLibrary.innerHTML.includes('&lt;Account>'));
+assert(nodes.steamLibrary.innerHTML.includes('steamAvatar'));
+assert(nodes.steamLibrary.innerHTML.includes('2 hours played'));
+assert(nodes.steamLibrary.innerHTML.includes('steamCardInfo'));
+assert(!nodes.steamLibrary.innerHTML.includes('onclick="launchSteamGame'));
+vm.runInContext(`selectGame('steam-76561198000000000-10')`,c);
+assert.equal(c.selectedGame.SteamAppId,10);assert.deepEqual(sent,[]);assert.deepEqual(sounds,['switch']);
+vm.runInContext('launchSelected()',c);assert.deepEqual(sent,[{type:'launchSteam',appId:10}]);assert.deepEqual(sounds,['switch','start']);
+vm.runInContext('launchSteamGame(999)',c);assert.equal(sent.length,1);
+c.state.Settings.LibraryLayout='default';vm.runInContext('renderSteamLibrary()',c);
+assert(nodes.steamLibrary.innerHTML.includes('cardThumb'));assert(nodes.steamLibrary.innerHTML.includes('cardActions'));
+assert(!nodes.steamLibrary.innerHTML.includes('steamCardInfo'));assert.equal(steamGrid.style.gridTemplateColumns,'repeat(3, 176px)');
+vm.runInContext('toggleSteamFavorite(selectedGame)',c);
+assert(c.state.Settings.SteamFavorites.includes('76561198000000000:10'));
+c.currentCategory='Favorite';vm.runInContext('renderSteamLibrary()',c);assert(!nodes.steamLibrary.innerHTML.includes('Game B'));
+assert(!nodes.steamLibrary.innerHTML.includes('steamHeading'),'Default Favorites must also hide account information');
+assert(nodes.steamLibrary.innerHTML.includes('<h2>Steam</h2>'));
+c.state.Settings.LibraryLayout='carousel';vm.runInContext('renderSteamLibrary()',c);
+assert(!nodes.steamLibrary.innerHTML.includes('steamHeading'));
+assert(!nodes.steamLibrary.innerHTML.includes('steamAvatar'));
+assert(!nodes.steamLibrary.innerHTML.includes('&lt;Account>'));
+assert(nodes.steamLibrary.innerHTML.includes('<h2>Steam</h2>'));
+assert(nodes.steamLibrary.innerHTML.includes('&lt;Game A>'));
+c.currentCategory='Private';vm.runInContext('renderSteamLibrary()',c);
+assert(nodes.steamLibrary.hidden,'Private filter must not expose an unfiltered Steam library');
+c.currentCategory='All';vm.runInContext('renderSteamLibrary()',c);
+assert(nodes.steamLibrary.innerHTML.includes('steamHeading'),'Home retains account information');
+c.currentCategory='__steam';nodes.search.value='Game B';vm.runInContext('renderSteamLibrary()',c);assert(!nodes.steamLibrary.innerHTML.includes('Game A'));assert.equal(nodes.grid.style.display,'none');
+vm.runInContext(`steamLibrary.status='error';steamLibrary.error='LibraryUnavailable';renderSteamLibrary();`,c);assert(nodes.steamLibrary.innerHTML.includes('Showing the saved library'));
+c.state.Settings.SteamId='76561198000000001';vm.runInContext('renderSteamLibrary();launchSteamGame(10)',c);assert(!nodes.steamLibrary.innerHTML.includes('Game B'));assert.equal(sent.filter(m=>m.type==='launchSteam').length,1);
+c.state.Settings.SteamId='';vm.runInContext('renderSteamLibrary()',c);assert(nodes.steamLibrary.hidden);assert.equal(c.currentCategory,'All');
+new vm.Script(main);
+console.log('PASS: account header/escaping, shared landscape cards, square Default cards/columns, detail before Start, favorites per account, search, cached errors, account isolation, UI syntax.');

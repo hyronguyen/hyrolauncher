@@ -1,0 +1,256 @@
+'use strict';
+const testRuntime = require('./test-runtime.cjs'); testRuntime.prepare();
+const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),assert=require('node:assert/strict');
+const {chromium}=require('./test-runtime.cjs').playwright();
+const root=testRuntime.projectRoot,out=path.join(testRuntime.verificationRoot,'bookshelf-ui');
+const server=http.createServer((request,response)=>{
+ const name=decodeURIComponent(request.url.split('?')[0]);
+ if(!/^\/ui\/[\w.-]+$/.test(name)){response.writeHead(404);response.end();return;}
+ const file=path.join(root,name);if(!fs.existsSync(file)){response.writeHead(404);response.end();return;}
+ response.writeHead(200,{'Content-Type':file.endsWith('.js')?'text/javascript':file.endsWith('.css')?'text/css':'text/html'});response.end(fs.readFileSync(file));
+});
+(async()=>{
+ fs.mkdirSync(out,{recursive:true});await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+ const browser=await chromium.launch({channel:'msedge',headless:true});let checks=0;
+ const check=(value,name)=>{assert(value,name);checks++;};
+ try{
+  const page=await browser.newPage({viewport:{width:1500,height:920},deviceScaleFactor:1}),errors=[];
+  page.on('pageerror',error=>errors.push(error.message));await page.route('**/*',route=>route.request().url().startsWith('http://127.0.0.1:')?route.continue():route.abort());
+  await page.addInitScript(()=>{window.qa={messages:[],handlers:[],send(data){this.handlers.forEach(handler=>handler({data}));}};window.chrome=window.chrome||{};window.chrome.webview={addEventListener:(type,handler)=>{if(type==='message')qa.handlers.push(handler);},postMessage:message=>qa.messages.push(message)};});
+  await page.goto('http://127.0.0.1:'+server.address().port+'/ui/index.html');
+  await page.evaluate(()=>{
+   const names=['Void Requiem','Neon Drift','Terra Bound','Lunar Echo','Cloud Garden','Starfall Odyssey','Blade Protocol','Mech Frontier','Pixel Realms','Solara','Night Watch','Drifter’s End','Shadow Archive','Blackwood Files','Pixel Forge','Game Hub'];
+   const cover=(name,index)=>{const colors=['#4727a2','#185b98','#347471','#904354','#485da5','#773aa0'];return 'data:image/svg+xml,'+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="600" height="900"><defs><linearGradient id="g" x2="1" y2="1"><stop stop-color="${colors[index%colors.length]}"/><stop offset="1" stop-color="#08101e"/></linearGradient><radialGradient id="a"><stop stop-color="#fff" stop-opacity=".65"/><stop offset="1" stop-color="#bd80ff" stop-opacity="0"/></radialGradient></defs><rect width="600" height="900" fill="url(#g)"/><circle cx="330" cy="300" r="180" fill="url(#a)"/><circle cx="330" cy="300" r="103" fill="#182642" stroke="#a0c8ff" stroke-width="5"/><path d="M0 680L170 400 310 590 415 480 600 700V900H0" fill="#0b1128"/><path d="M210 880L330 490 385 880" fill="#8797cf" opacity=".4"/><text x="300" y="130" text-anchor="middle" fill="#fff" font-size="34" font-family="sans-serif" letter-spacing="5">${name.toUpperCase()}</text><text x="300" y="780" text-anchor="middle" fill="#bec9f1" font-size="15" font-family="sans-serif" letter-spacing="6">HYRO · QA FIXTURE</text></svg>`);};
+   qa.cover=cover;
+   qa.games=names.map((Name,i)=>({Id:'game-'+i,Name,IconPath:cover(Name,i),BannerPath:cover(Name,i),Path:i===15?'https://example.com/app':'C:\\Games\\'+i+'.exe',Category:i>=14?'Tools':'Games',IsUrl:i===15,Favorite:i<6,Private:i===12||i===13,IgdbId:0}));
+   qa.assets={logo:cover('HYRO',0),banner:cover('HYRO',0),svgPlayApp:'<svg viewBox="0 0 24 24"><path d="M7 4v16l14-8Z" fill="currentColor"/></svg>'};
+   qa.settings={LibraryLayout:'bookshelf',AccentColor:'#ad61f4',Language:'en',ThemeMode:'dark',DisableBgm:true,DisableEffects:false,MaxGridColumns:5,CardStyle:'icon',SteamId:'76561198000000000'};
+   qa.send({type:'state',state:{Games:qa.games,Settings:qa.settings,Categories:['Games','Tools'],Plugins:[]},assets:qa.assets});
+   qa.send({type:'steamLibrary',steamId:qa.settings.SteamId,status:'ready',games:[{AppId:123,Name:'Steam Fixture',Image:cover('Steam Fixture',3),PlaytimeMinutes:123}],profile:{Name:'QA'}});
+  });
+  await page.waitForSelector('.shelfCase');check(await page.locator('.shelfCase').count()===17,'all local/Steam cases present');
+  check(await page.locator('.bookshelfLibrary').count()===1,'new layout active');check(await page.locator('#grid').evaluate(element=>getComputedStyle(element).gridTemplateColumns.split(' ').length===2),'wide pane beside shelves');
+  check(await page.locator('.shelfCase.locked').count()===2,'locked private placeholders');check(!(await page.locator('.shelfWall').innerText()).includes('Shadow Archive'),'private title hidden');
+  const caseInfo=async id=>page.locator('[data-book-case="'+id+'"]').evaluate(element=>{
+   const face=element.querySelector('.shelfCaseFace'),spine=element.querySelector('.shelfCaseSpine'),cover=element.querySelector('.shelfCaseCover'),style=getComputedStyle(face),matrix=new DOMMatrixReadOnly(style.transform),rect=cover.getBoundingClientRect(),slot=element.getBoundingClientRect(),row=element.parentElement.getBoundingClientRect();
+   const name=spine.querySelector('b');
+   return {id:element.dataset.bookCase,width:parseFloat(getComputedStyle(element).width),slot:{x:slot.x,y:slot.y,width:slot.width,height:slot.height},front:{left:rect.left,right:rect.right,top:rect.top,bottom:rect.bottom,width:rect.width,height:rect.height},row:{left:row.left,right:row.right,top:row.top,bottom:row.bottom},coverWidth:parseFloat(getComputedStyle(cover).width),coverAxis:matrix.m11,pullY:matrix.m42,pullZ:matrix.m43,duration:parseFloat(style.transitionDuration),easing:style.transitionTimingFunction,preserve3d:style.transformStyle,filter:style.filter,perspective:parseFloat(getComputedStyle(element).perspective),faceCount:face.children.length,rigidFaces:['.shelfCaseSpine','.shelfCaseCover','.shelfCaseBack','.shelfCaseEdge','.shelfCaseTop'].every(selector=>face.querySelector(selector)?.parentElement===face),name:name.textContent,writingMode:getComputedStyle(name).writingMode,logo:spine.querySelector('svg')?.textContent,favoriteInteractive:getComputedStyle(element.querySelector('.shelfCaseFavorite')).pointerEvents,artwork:cover.querySelector('img').naturalWidth,artworkSrc:cover.querySelector('img').getAttribute('src'),artLight:getComputedStyle(element).getPropertyValue('--art-light').trim(),reflection:Number(getComputedStyle(element,'::before').opacity),zIndex:Number(getComputedStyle(element).zIndex),spineDepth:parseFloat(getComputedStyle(spine).width),neighborSlots:Array.from(element.parentElement.children).filter(other=>other!==element).map(other=>{const r=other.getBoundingClientRect();return {id:other.dataset.bookCase,x:r.x,y:r.y,width:r.width};})};
+  });
+  const sameSlots=(a,b)=>a.width===b.width&&a.slot.x===b.slot.x&&a.slot.y===b.slot.y&&JSON.stringify(a.neighborSlots)===JSON.stringify(b.neighborSlots);
+  const leave=async()=>{await page.mouse.move(15,15);await page.waitForTimeout(380);};
+  const hoverCase=async id=>{const slot=await page.locator('[data-book-case="'+id+'"]').boundingBox();await page.mouse.move(slot.x+Math.min(38,slot.width/2),slot.y+slot.height*.48);};
+  await leave();
+  const closed=await caseInfo('game-8');
+  check(closed.width>=70&&closed.width<=80,'default case keeps a compact fixed shelf slot');
+  check(await page.locator('.shelfCase.selected').count()===0,'no game case is automatically pulled out');
+  check(closed.name==='Pixel Realms'&&closed.writingMode==='vertical-rl','spine carries vertical game title');
+  check(closed.logo==='HYRO','spine includes existing HYRO SVG branding');
+  check(closed.rigidFaces&&closed.faceCount===5&&closed.preserve3d==='preserve-3d'&&closed.filter==='none'&&closed.perspective>=800,'spine/front/depth edges remain unflattened rigid children of one perspective object');
+  check(closed.coverAxis>=.2&&closed.coverAxis<=.35&&closed.coverWidth>=159&&closed.artwork>0,'default angle exposes 20–35% of original front-cover plane');
+  check(closed.front.width>35&&closed.front.width<70&&closed.spineDepth>=22,'default cover is visibly angled with realistic case thickness');
+  check(closed.duration===.15&&closed.easing==='cubic-bezier(0.22, 1, 0.36, 1)','hover has a separate 150ms eased transform');
+  check(closed.favoriteInteractive==='none','hidden favorite button cannot cover the default spine');
+  check(await page.locator('[data-book-case="game-8"] .shelfCaseFavorite').getAttribute('tabindex')==='-1','hidden favorite controls stay out of keyboard navigation');
+  await page.screenshot({path:path.join(out,'angled-default.png')});
+  await hoverCase('game-8');await page.waitForTimeout(80);
+  const midpoint=await caseInfo('game-8');
+  check(sameSlots(closed,midpoint),'neighbor slots and shelf position stay fixed during hover transition');
+  check(Math.abs(midpoint.coverAxis-closed.coverAxis)<.002,'hover preserves the original partial-artwork angle');
+  await page.waitForTimeout(300);
+  const hovered=await caseInfo('game-8');
+  check(Math.abs(hovered.coverAxis-closed.coverAxis)<.002&&hovered.front.width<hovered.coverWidth*.4,'hover does not open or expand the front cover');
+  check(hovered.pullY===-4&&hovered.pullZ===0&&hovered.zIndex>closed.zIndex,'hover adds only a small 4px lift');
+  check(hovered.reflection>closed.reflection&&hovered.artLight!=='158 157 184','hover light is localized and artwork color is sampled once');
+  check(sameSlots(closed,hovered),'fully expanded case never changes neighboring bounds');
+  check(hovered.artworkSrc===closed.artworkSrc,'hover preserves the original artwork image');
+  await page.screenshot({path:path.join(out,'angled-hover.png')});
+  await page.locator('[data-book-id="game-8"][data-book-action="select"]').click();check((await page.locator('#bookshelfDetail h2').innerText())==='Pixel Realms','selection updates pane');
+  check(await page.locator('[data-book-case="game-8"] .shelfCaseFace').getAttribute('aria-pressed')==='true','selected semantics');
+  await page.waitForTimeout(380);
+  const selected=await caseInfo('game-8');
+  check(selected.coverAxis>.98&&selected.pullZ===40&&selected.duration===.3,'clicked case pulls forward and opens in 300ms');
+  check(selected.reflection>hovered.reflection&&selected.zIndex>hovered.zIndex,'selected case strengthens local lighting and layering');
+  check(await page.locator('[data-book-case="game-8"] .shelfCaseFavorite').getAttribute('tabindex')==='0','selected favorite control becomes keyboard accessible');
+  await leave();const returned=await caseInfo('game-8');
+  check(returned.coverAxis>.98&&returned.pullZ===40,'mouse leave retains the selected open case');
+  check(sameSlots(closed,returned)&&await page.locator('.shelfCase.selected').count()===1,'selection retains detail semantics without shifting the shelf');
+  await page.screenshot({path:path.join(out,'selected-wide-dark.png')});
+  await page.locator('[data-book-case="game-8"] .shelfCaseFace').click();await leave();
+  check((await caseInfo('game-8')).coverAxis<.35&&await page.locator('.shelfCase.selected').count()===0,'clicking selected case closes it');
+  await hoverCase('game-9');await page.waitForTimeout(70);await hoverCase('game-8');await page.waitForTimeout(380);
+  check((await caseInfo('game-8')).coverAxis<.35&&(await caseInfo('game-9')).coverAxis<.35,'rapid hover never opens a case');
+  await leave();
+  const visibleRowIds=await page.locator('[data-book-case="game-8"]').evaluate(element=>Array.from(element.parentElement.children).map(other=>other.dataset.bookCase));
+  for(const id of [visibleRowIds[0],visibleRowIds.at(-1)]){
+   await page.locator('[data-book-case="'+id+'"] .shelfCaseFace').click();await page.waitForTimeout(380);const info=await caseInfo(id);
+   check(info.front.left>=info.row.left-1&&info.front.right<=info.row.right+1,'first/last hover remains within shelf clearance '+id);
+   const hit=await page.evaluate(({id,x,y})=>document.elementFromPoint(x,y)?.closest('[data-book-case]')?.dataset.bookCase===id,{id,x:Math.min(info.front.right-15,info.front.left+info.front.width*.7),y:info.front.top+info.front.height*.45});
+   check(hit,'expanded artwork stays above adjacent cases '+id);await page.locator('[data-book-case="'+id+'"] .shelfCaseFace').click();await leave();
+  }
+  await page.locator('[data-book-case="game-8"] .shelfCaseFace').focus();await page.keyboard.press('Tab');await page.keyboard.press('Shift+Tab');await page.waitForTimeout(380);
+  check((await caseInfo('game-8')).coverAxis<.35,'keyboard focus highlights without opening the case');
+  await page.keyboard.press('Enter');await page.waitForTimeout(380);check((await caseInfo('game-8')).coverAxis>.98,'keyboard Enter selects and opens case');
+  await page.locator('[data-book-case="game-11"] .shelfCaseFace').click();await leave();
+  check((await caseInfo('game-8')).coverAxis<.35&&(await caseInfo('game-11')).coverAxis>.98,'selecting another case closes old and opens new');
+  const emptyShelf=await page.locator('[data-book-case="game-11"]').evaluate(element=>{const row=element.parentElement.getBoundingClientRect();return{x:row.right-22,y:row.top+10};});await page.mouse.click(emptyShelf.x,emptyShelf.y);await leave();
+  check(await page.locator('.shelfCase.selected').count()===0,'clicking empty shelf deselects the case');
+  await page.locator('[data-book-case="game-8"] .shelfCaseFace').click();await leave();
+  await page.evaluate(()=>document.activeElement.blur());await leave();
+  await page.locator('#bookshelfDetail [data-book-action="play"]').click();check(await page.evaluate(()=>qa.messages.some(m=>m.type==='launch'&&m.id==='game-8')),'native launch retained');
+  await page.evaluate(()=>qa.send({type:'runningState',runningIds:['game-8']}));check(await page.locator('.cabinetPlay').isDisabled(),'runninggame disabled');
+  await page.waitForTimeout(380);
+  await page.screenshot({path:path.join(out,'wide-dark.png')});
+  await page.locator('#categories > button[data-category="Favorite"]').click();check(await page.locator('.shelfCase').count()===6,'favorite filter');check(await page.locator('.carouselHero,.steamHeading').count()===0,'favorite no banner/account');
+  await page.locator('#categories > button[data-category="__steam"]').click();check(await page.locator('.shelfCase').count()===1,'Steam-only shelf');check((await page.locator('#bookshelfDetail').innerText()).includes('2.1'),'native playtime');
+  await page.locator('#search').fill('nothing matches');await page.waitForTimeout(180);check(await page.locator('.cabinetEmpty').count()===1,'empty filter handled');
+  await page.locator('#search').fill('');await page.waitForTimeout(180);await page.locator('#categories > button[data-category="All"]').click();
+  await page.evaluate(()=>setBookshelfSelection(''));
+  await page.evaluate(()=>{openAppSettings();});check(await page.locator('#sLibraryLayout').inputValue()==='bookshelf','setting restored');check(!(await page.locator('#sCardStyle').isVisible())&&!(await page.locator('#sCarouselDisplay').isVisible()),'irrelevant settings hidden');
+  check(await page.locator('#bookshelfAnimationSettings').isVisible(),'bookshelf animation controls reuse the existing Settings panel');
+  check(await page.locator('[data-bookshelf-setting]').count()===9,'all nine animation and lighting controls present');
+  check(await page.locator('#sBookshelfPullDuration').inputValue()==='300'&&await page.locator('#sBookshelfHoverDuration').inputValue()==='150','separate duration defaults');
+  const setShelfControl=async(key,value)=>page.evaluate(({key,value})=>{const control=document.getElementById('s'+key);if(control.type==='checkbox'){control.checked=value;control.dispatchEvent(new Event('change',{bubbles:true}));}else{control.value=String(value);control.dispatchEvent(new Event('input',{bubbles:true}));}},{key,value});
+  await setShelfControl('BookshelfPullDuration',700);await setShelfControl('BookshelfHoverDuration',250);await setShelfControl('BookshelfPullDistance',80);await setShelfControl('BookshelfHoverLift',10);await setShelfControl('BookshelfSelectedAngle',12);await setShelfControl('BookshelfLightingIntensity',75);
+  check(await page.locator('#grid').evaluate(grid=>grid.style.getPropertyValue('--case-pull-duration')==='700ms'&&grid.style.getPropertyValue('--case-hover-duration')==='250ms'&&grid.style.getPropertyValue('--case-pull')==='80px'&&grid.style.getPropertyValue('--case-hover-lift')==='10px'&&grid.style.getPropertyValue('--case-selected-angle')==='12deg'&&grid.style.getPropertyValue('--cabinet-light')==='0.75'),'slider inputs immediately update CSS settings without restarting');
+  await page.waitForTimeout(400);check(await page.evaluate(()=>qa.messages.some(message=>message.type==='saveSettings'&&message.settings.BookshelfPullDuration===700&&message.settings.BookshelfHoverDuration===250&&message.settings.BookshelfPullDistance===80)),'live adjustments persist through existing native saveSettings');
+  await page.evaluate(()=>closeAppSettings());await page.locator('[data-book-case="game-8"] .shelfCaseFace').click();await page.waitForTimeout(800);
+  check((await caseInfo('game-8')).duration===.7&&(await caseInfo('game-8')).pullZ===80&&Math.abs((await caseInfo('game-8')).coverAxis-Math.cos(12*Math.PI/180))<.002,'selected case uses configured duration, distance, and angle');
+  await page.locator('[data-book-case="game-8"] .shelfCaseFace').click();await page.mouse.move(15,15);await page.waitForTimeout(800);
+  await page.evaluate(()=>openAppSettings());
+  check(await page.locator('#sBookshelfPullDuration').getAttribute('max')==='5000','pull-out slider supports five seconds');
+  await setShelfControl('BookshelfPullDuration',5000);await page.evaluate(()=>closeAppSettings());
+  await page.evaluate(()=>{qa.longFace=document.querySelector('[data-book-case="game-8"] .shelfCaseFace');});
+  await page.locator('[data-book-case="game-8"] .shelfCaseFace').click();await page.mouse.move(15,15);await page.waitForTimeout(100);
+  const longEarly=await caseInfo('game-8');
+  check(longEarly.duration===5&&longEarly.pullZ>0&&longEarly.pullZ<70,'five-second pull has a visible intermediate transform instead of an instant endpoint');
+  await page.waitForTimeout(550);
+  await page.evaluate(()=>qa.send({type:'state',state:JSON.parse(JSON.stringify(state)),assets,runningIds:[]}));
+  check(await page.evaluate(()=>qa.longFace===document.querySelector('[data-book-case="game-8"] .shelfCaseFace')),'unchanged native settings response preserves the moving 3D case object');
+  const longMiddle=await caseInfo('game-8');
+  check(longMiddle.pullZ>longEarly.pullZ&&longMiddle.pullZ<79&&longMiddle.coverAxis<Math.cos(12*Math.PI/180)-.005,'pull remains in progress after native state refresh');
+  await page.evaluate(()=>qa.send({type:'runningState',runningIds:['game-8']}));
+  check(await page.evaluate(()=>qa.longFace===document.querySelector('[data-book-case="game-8"] .shelfCaseFace')),'running-game status preserves in-flight case motion');
+  await page.waitForFunction(()=>Math.abs(new DOMMatrixReadOnly(getComputedStyle(qa.longFace).transform).m43-80)<.00001&&qa.longFace.getAnimations().length===0);
+  check((await caseInfo('game-8')).duration===5&&(await caseInfo('game-8')).pullZ===80,'five-second pull eventually reaches its full configured distance');
+  await page.screenshot({path:path.join(out,'pull-five-seconds-selected.png')});
+  await page.locator('[data-book-case="game-8"] .shelfCaseFace').click();await page.mouse.move(15,15);await page.waitForTimeout(500);
+  const longReturn=await caseInfo('game-8');
+  check(longReturn.duration===5&&longReturn.pullZ>0&&longReturn.pullZ<79&&await page.locator('[data-book-case="game-8"]').evaluate(element=>element.classList.contains('closing')),'deselection smoothly returns over the configured five-second duration');
+  await page.evaluate(()=>qa.send({type:'state',state:JSON.parse(JSON.stringify(state)),assets,runningIds:[]}));
+  check(await page.evaluate(()=>qa.longFace===document.querySelector('[data-book-case="game-8"] .shelfCaseFace')),'native refresh also preserves the returning case');
+  await page.locator('[data-book-case="game-11"] .shelfCaseFace').click();
+  check(await page.locator('[data-book-case="game-8"]').evaluate(element=>element.classList.contains('closing')&&getComputedStyle(element).zIndex==='20'),'choosing another case keeps the previous returning case above its neighbors');
+  check(sameSlots(longEarly,await caseInfo('game-8')),'long pull and return do not reflow neighboring shelf slots');
+  await page.waitForFunction(()=>!document.querySelector('[data-book-case="game-8"]').classList.contains('closing'));
+  check((await caseInfo('game-8')).pullZ===0&&(await caseInfo('game-8')).coverAxis<.35,'five-second return restores the original shelf position and angle');
+  await page.waitForFunction(()=>document.querySelector('[data-book-case="game-11"] .shelfCaseFace').getAnimations().length===0);
+  await page.evaluate(()=>setBookshelfSelection('game-8'));await page.waitForTimeout(50);
+  await page.evaluate(()=>openAppSettings());await setShelfControl('BookshelfPullDuration',700);
+  await page.evaluate(()=>openAppSettings());await setShelfControl('BookshelfAnimationsEnabled',false);await setShelfControl('BookshelfReactiveLighting',false);await page.evaluate(()=>closeAppSettings());await page.waitForTimeout(180);
+  check((await caseInfo('game-8')).duration===0&&(await caseInfo('game-8')).reflection===0,'animation and reactive lighting switches apply independently');
+  await page.locator('[data-book-case="game-8"] .shelfCaseFace').click();await leave();check((await caseInfo('game-8')).coverAxis<.35,'disabled animation still allows deselection');
+  await page.evaluate(()=>{openAppSettings();resetBookshelfAnimationSettings();});await page.waitForTimeout(180);
+  check(await page.locator('#sBookshelfPullDuration').inputValue()==='300'&&await page.locator('#sBookshelfAnimationsEnabled').isChecked()&&await page.locator('#sBookshelfReactiveLighting').isChecked(),'Reset restores all defaults');
+  await setShelfControl('BookshelfDefaultAngle',40);await page.waitForTimeout(100);check(await page.locator('#grid').evaluate(grid=>grid.style.getPropertyValue('--case-angle')==='50deg'),'default angle updates live');
+  await page.evaluate(()=>resetBookshelfAnimationSettings());
+  await page.selectOption('#sLibraryLayout','default');check(await page.locator('#sCardStyle').isVisible(),'default settings visible');await page.evaluate(()=>closeAppSettings());
+  for(const theme of ['light','dark'])for(const width of [1500,1280,850,600,375]){
+   await page.setViewportSize({width,height:850});await page.evaluate(theme=>{state.Settings.ThemeMode=theme;applyTheme();render();},theme);
+   await page.waitForTimeout(500);await leave();check(await page.locator('#grid').evaluate(el=>el.scrollWidth<=el.clientWidth+2),'no cabinet overflow '+width+'/'+theme);
+   check(await page.locator('.libraryBody').evaluate(el=>el.scrollWidth<=el.clientWidth+2),'no horizontal page overflow '+width+'/'+theme);
+   const responsive=await caseInfo('game-8');check(responsive.width>=(width<=600?60:70)&&responsive.width<=(width<=600?70:80)&&responsive.coverAxis<.35,'compact partial-cover shelf slot '+width+'/'+theme);
+   check(await page.locator('#bookshelfDetail').evaluate(el=>{const box=el.getBoundingClientRect(),art=el.querySelector('.cabinetDetailArt').getBoundingClientRect();return art.left>=box.left-1&&art.right<=box.right+1&&art.top>=box.top-1&&art.bottom<=box.bottom+1;}),'selected artwork stays contained in its detail pane '+width+'/'+theme);
+   await page.screenshot({path:path.join(out,width+'-'+theme+'.png')});
+  }
+  await page.setViewportSize({width:1500,height:920});await page.evaluate(()=>{state.Settings.ThemeMode='dark';state.Settings.DisableEffects=true;applyTheme();render();});await page.waitForTimeout(180);await leave();
+  check((await caseInfo('game-8')).duration===.15,'explicit bookshelf animation option survives launcher cosmetic-effects disabling');
+  await page.evaluate(()=>{state.Settings.DisableEffects=false;applyTheme();render();});await page.emulateMedia({reducedMotion:'reduce'});await leave();
+  check((await caseInfo('game-8')).duration===.15,'explicit bookshelf animation option survives OS reduced-motion preference');
+  await page.evaluate(()=>{state.Settings.BookshelfAnimationsEnabled=false;applyBookshelfSettings();});check((await caseInfo('game-8')).duration===0,'dedicated shelf animation OFF remains authoritative under reduced motion');
+  await page.evaluate(()=>{state.Settings.BookshelfAnimationsEnabled=true;applyBookshelfSettings();});await page.emulateMedia({reducedMotion:'no-preference'});
+  await page.evaluate(()=>{
+   qa.largeSteam=Array.from({length:123},(_,i)=>({AppId:1000+i,Name:'Steam Library Game '+String(i+1).padStart(3,'0'),Image:qa.cover('Steam '+String(i+1),i),PlaytimeMinutes:i*13}));
+   qa.send({type:'steamLibrary',steamId:qa.settings.SteamId,status:'ready',games:qa.largeSteam,profile:{Name:'QA'}});
+  });await page.locator('#categories > button[data-category="__steam"]').click();await page.waitForTimeout(180);
+  check(await page.locator('.shelfCase').count()===123,'all 123 Steam games remain on category shelves');
+  const viewportReports=[];
+  for(const width of [1500,1280,950,850,600,500,375]){
+   await page.setViewportSize({width,height:850});await page.waitForTimeout(400);await leave();
+   check(await page.locator('.cabinetCases').count()>1,'large library separates into shelf rows '+width);
+   check(await page.locator('.libraryBody').evaluate(el=>el.scrollHeight>el.clientHeight&&getComputedStyle(el).overflowY!=='hidden'),'vertical page scrolling retained '+width);
+   check(await page.locator('.libraryBody').evaluate(el=>el.scrollWidth<=el.clientWidth+2),'large library has no horizontal overflow '+width);
+   const row=page.locator('.cabinetCases').first();await row.scrollIntoViewIfNeeded();
+   const ids=await row.locator('[data-book-case]').evaluateAll(elements=>elements.map(element=>element.dataset.bookCase));
+   const first=await caseInfo(ids[0]);
+   const shelfBounds=await row.boundingBox();
+   for(const id of [ids[0],ids.at(-1)]){
+    const original=await caseInfo(id);await page.locator('[data-book-case="'+id+'"] .shelfCaseFace').click();await page.waitForTimeout(380);const full=await caseInfo(id);
+    check(sameSlots(original,full),'full row keeps neighbors stable '+width+'/'+id);
+    check(full.front.left>=shelfBounds.x-1&&full.front.right<=shelfBounds.x+shelfBounds.width+1,'full row expanded front has right clearance '+width+'/'+id);
+    check(await page.locator('.libraryBody').evaluate(el=>el.scrollWidth<=el.clientWidth+2),'expanded full row does not create horizontal scroll '+width+'/'+id);await page.locator('[data-book-case="'+id+'"] .shelfCaseFace').click();await leave();
+   }
+   const spacing=first.neighborSlots.length?first.neighborSlots[0].x-first.slot.x-first.width:0;
+   check(spacing>=0&&spacing<=5,'cases remain tightly packed '+width);
+   viewportReports.push({Width:width,Cases:123,Rows:await page.locator('.cabinetCases').count(),CasesFirstRow:ids.length,Slot:first.width,Gap:spacing});
+   if(width===1500||width===375)await page.screenshot({path:path.join(out,'steam-123-'+width+'.png')});
+  }
+  await page.evaluate(()=>{state.Settings.BookshelfAnimationsEnabled=false;state.Settings.BookshelfDefaultAngle=40;state.Settings.BookshelfPullDistance=100;state.Settings.BookshelfSelectedAngle=15;state.Settings.BookshelfHoverLift=15;state.Settings.BookshelfLightingIntensity=100;render();});
+  for(const width of [1500,600,375]){
+   await page.setViewportSize({width,height:850});await page.waitForTimeout(180);await page.locator('.cabinetCases').first().scrollIntoViewIfNeeded();
+   const last=await page.locator('.cabinetCases').first().locator('[data-book-case]').last().getAttribute('data-book-case');
+   await page.locator('[data-book-case="'+last+'"] .shelfCaseFace').click();const extreme=await caseInfo(last);
+   check(extreme.front.right<=extreme.row.right+1&&await page.locator('.libraryBody').evaluate(element=>element.scrollWidth<=element.clientWidth+2),'maximum case angle and pull distance retain open-cover clearance '+width);
+   check(extreme.duration===0&&Math.abs(extreme.coverAxis-Math.cos(15*Math.PI/180))<.002,'maximum selected angle retains rigid shape without animation '+width);
+   await page.locator('[data-book-case="'+last+'"] .shelfCaseFace').click();await leave();
+  }
+  await page.evaluate(()=>{bookshelfSettingsSpec.forEach(([key,fallback])=>state.Settings[key]=fallback);state.Settings.BookshelfDefaultAngle=0;render();});await leave();
+  check((await page.locator('.shelfCaseFace').first().evaluate(face=>new DOMMatrixReadOnly(getComputedStyle(face).transform).m11))<.01,'zero default angle allows compact spine-only presentation');
+  await page.evaluate(()=>{state.Settings.BookshelfDefaultAngle=20;render();});
+  await page.setViewportSize({width:1280,height:850});await page.evaluate(()=>{
+   state.Games.push({Id:'fallback-missing',Name:'Missing Artwork',Category:'Games',Path:'C:\\Missing.exe',Favorite:false,Private:false,IgdbId:0},{Id:'fallback-broken',Name:'Broken Artwork',Category:'Games',IconPath:location.origin+'/ui/missing-fixture.png',BannerPath:location.origin+'/ui/missing-fixture.png',Path:'C:\\Broken.exe',Favorite:false,Private:false,IgdbId:0});render();
+  });await page.locator('#categories > button[data-category="All"]').click();await page.waitForTimeout(300);
+  await page.locator('[data-book-case="fallback-broken"]').scrollIntoViewIfNeeded();await page.waitForTimeout(200);
+  check((await caseInfo('fallback-missing')).artwork>0,'missing artwork retains existing asset fallback');
+  check((await caseInfo('fallback-broken')).artwork>0&&(await caseInfo('fallback-broken')).artworkSrc===await page.evaluate(()=>assets.logo),'broken artwork resolves to existing HYRO logo');
+  await page.locator('#categories > button[data-category="Private"]').click();check(await page.locator('.shelfCase.locked').count()===2,'private shelf remains locked');
+  check(!(await page.locator('.shelfWall').innerText()).includes('Blackwood Files'),'private game title never leaks through angled covers');
+  await page.evaluate(()=>{closePinModal();state.Plugins=[{Id:'builtin.hytcg',Name:'HYTCG',Type:'hytcg',BuiltIn:true,IconPath:assets.logo}];renderPlugins();qa.messages=[];});
+  await page.locator('[data-plugin-id="builtin.hytcg"]').click({clickCount:5,delay:80});
+  check(await page.evaluate(()=>qa.messages.filter(message=>message.type==='showBuiltInPlugin').length===4&&qa.messages.filter(message=>message.type==='hytcgDevShortcut').length===1),'fifth HYTCG toolbar click sends one native developer shortcut and preserves first four normal opens');
+  const touchContext=await browser.newContext({viewport:{width:500,height:850},hasTouch:true,isMobile:true,deviceScaleFactor:1});
+  try{
+   const touchPage=await touchContext.newPage();touchPage.on('pageerror',error=>errors.push('Touch: '+error.message));
+   await touchPage.route('**/*',route=>route.request().url().startsWith('http://127.0.0.1:')?route.continue():route.abort());
+   await touchPage.addInitScript(()=>{window.qa={messages:[],handlers:[],send(data){this.handlers.forEach(handler=>handler({data}));}};window.chrome=window.chrome||{};window.chrome.webview={addEventListener:(type,handler)=>{if(type==='message')qa.handlers.push(handler);},postMessage:message=>qa.messages.push(message)};});
+   await touchPage.goto('http://127.0.0.1:'+server.address().port+'/ui/index.html');
+   const touchFixture=await page.evaluate(()=>({type:'state',state:{Games:qa.games.slice(0,16),Settings:{...qa.settings,...Object.fromEntries(bookshelfSettingsSpec.map(([key,fallback])=>[key,fallback])),ThemeMode:'dark',DisableEffects:false},Categories:['Games','Tools'],Plugins:[]},assets:qa.assets}));
+   await touchPage.evaluate(fixture=>qa.send(fixture),touchFixture);await touchPage.waitForSelector('.shelfCase');await touchPage.waitForTimeout(380);
+   check(await touchPage.evaluate(()=>matchMedia('(hover:none)').matches),'touch fixture uses touch-only interaction');
+   const touchAngle=async()=>touchPage.locator('[data-book-case="game-0"] .shelfCaseFace').evaluate(face=>new DOMMatrixReadOnly(getComputedStyle(face).transform).m11);
+   check((await touchAngle())<.35,'touch initial case remains angled by default');
+   await touchPage.locator('[data-book-case="game-0"] .shelfCaseFace').tap();await touchPage.waitForTimeout(380);
+   check((await touchAngle())>.98,'touch tap focuses and opens the case for artwork and controls');
+   await touchPage.locator('#search').tap({position:{x:25,y:20}});await touchPage.waitForTimeout(380);
+   check((await touchAngle())>.98,'touch focus leave retains selection');
+   await touchPage.locator('[data-book-case="game-0"] .shelfCaseFace').tap();await touchPage.waitForTimeout(380);check((await touchAngle())<.35,'touch second tap returns case to shelf');
+  }finally{await touchContext.close();}
+  const localPage=await browser.newPage({viewport:{width:1280,height:850}});
+  try{
+   const localArtwork=path.join(out,'local-art.svg');fs.writeFileSync(localArtwork,'<svg xmlns="http://www.w3.org/2000/svg" width="400" height="600"><rect width="400" height="600" fill="#2580ba"/></svg>');
+   await localPage.addInitScript(()=>{window.qa={messages:[],handlers:[],send(data){this.handlers.forEach(handler=>handler({data}));}};window.chrome=window.chrome||{};window.chrome.webview={addEventListener:(type,handler)=>{if(type==='message')qa.handlers.push(handler);},postMessage:message=>{qa.messages.push(message);if(message.type==='bookshelfArtworkColor')setTimeout(()=>qa.send({type:'bookshelfArtworkColor',gameId:message.gameId,color:'37 128 186'}),20);}};});
+   await localPage.goto(require('node:url').pathToFileURL(path.join(root,'ui/index.html')).href);
+   const localFixture=await page.evaluate(()=>({type:'state',state:{Games:[{Id:'local-art',Name:'Local artwork',IconPath:'',Category:'Games',Path:'C:\\QA.exe',Favorite:false,Private:false,IgdbId:0}],Settings:{...qa.settings,LibraryLayout:'bookshelf',SteamId:''},Categories:['Games'],Plugins:[]},assets:qa.assets}));localFixture.state.Games[0].IconPath=localArtwork;
+   await localPage.evaluate(fixture=>qa.send(fixture),localFixture);await localPage.waitForSelector('[data-book-case="local-art"]');await localPage.waitForTimeout(200);
+   await localPage.locator('[data-book-case="local-art"] .shelfCaseFace').click();await localPage.evaluate(()=>{state.Settings.LibraryLayout='default';render();});await localPage.waitForTimeout(100);
+   await localPage.evaluate(()=>{state.Settings.LibraryLayout='bookshelf';render();});await localPage.waitForTimeout(100);
+   check(await localPage.evaluate(()=>qa.messages.some(message=>message.type==='bookshelfArtworkColor'&&message.gameId==='local-art'&&!message.path)),'file-origin pixel restriction requests native local-color sampling by approved game ID only');
+   check(await localPage.locator('[data-book-case="local-art"]').evaluate(book=>getComputedStyle(book).getPropertyValue('--art-light').trim()==='37 128 186'),'native original local-file artwork color updates selected cabinet lighting');
+   check(await localPage.evaluate(()=>qa.messages.filter(message=>message.type==='bookshelfArtworkColor').length===1),'native color response is cached across a layout change without repeated reads');
+  }finally{await localPage.close();}
+  await page.evaluate(()=>{setBigPictureUi(true);});check(await page.locator('.carouselLayout').count()===1,'Big Picture overrides shelf');
+  await page.evaluate(()=>{setBigPictureUi(false);});check(await page.locator('.bookshelfGrid').count()===1,'shelf restored after Big Picture');
+  await page.evaluate(()=>{state.Settings.LibraryLayout='default';render();});check(await page.locator('.bookshelfGrid').count()===0,'existing default retained');
+  await page.evaluate(()=>{state.Settings.LibraryLayout='carousel';render();});check(await page.locator('.carouselLayout').count()===1,'existing carousel retained');
+  check(errors.length===0,'no script errors: '+errors.join('; '));fs.writeFileSync(path.join(out,'report.json'),JSON.stringify({Result:'PASS',Checks:checks,Errors:errors,ProductionDataAccessed:false,DefaultCase:closed,HoverCase:hovered,SelectedCase:selected,LongPull:{Early:longEarly,AfterNativeRefresh:longMiddle,Returning:longReturn},Viewports:viewportReports},null,2));console.log('PASS bookshelf UI: '+checks+' checks');
+ }finally{await browser.close();server.close();}
+})().catch(error=>{server.close();console.error(error.stack);process.exitCode=1;});
