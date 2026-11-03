@@ -1,5 +1,5 @@
 param(
- [string]$Version = '1.0.0',
+ [string]$Version = '1.1.0',
  [string]$Repository = 'hyronguyen/hyrolauncher',
  [string]$ArtifactDirectory = '',
  [switch]$ValidateOnly
@@ -155,7 +155,7 @@ try {
  $taskRelease = Invoke-GitHubRequest 'GET' ([uri]($taskApiRoot + 'releases/tags/' + $taskTag)) -AllowNotFound
  if (!$taskRelease) {
   $taskSafeFailure = 'GitHub release creation failed. Verify that main has been pushed and the credential can write releases.'
-  $taskBody = "Windows 10/11 x64 release.`n`n- Offline installer with Microsoft .NET Framework 4.8 and WebView2 prerequisites included.`n- Installs per user under %LOCALAPPDATA%\Programs\HYROLauncher. Windows may request administrator permission if .NET Framework must be installed.`n- Portable ZIP is also available.`n- Updates and uninstall preserve user-created cards, progress and API configuration.`n- SHA256SUMS.txt verifies both downloads."
+  $taskBody = "Windows 10/11 x64 release.`n`n- Cozy and chill theme across Default, Carousel and wooden Game shelf layouts.`n- Game shelf: angled cases, pull-out motion, backlight brightness and animated RGB modes.`n- Steam games use IGDB details; Explore keeps its artwork-card layout.`n- System Info storage view and bounded, safely reclaimable launcher caches.`n- HYTCG arena attack, healing, buff and defense effects.`n`nThe offline installer includes Microsoft .NET Framework 4.8 and WebView2 prerequisites. It installs per user under %LOCALAPPDATA%\Programs\HYROLauncher; Windows may request administrator permission if .NET Framework must be installed. A portable ZIP is also available. Updates and uninstall preserve user-created cards, progress and API configuration. Verify both downloads with SHA256SUMS.txt."
   $taskReleaseJson = [ordered]@{tag_name=$taskTag; target_commitish='main'; name=('HYRO Launcher ' + $Version); body=$taskBody; draft=$false; prerelease=$false} | ConvertTo-Json -Depth 3
   $taskRelease = Invoke-GitHubRequest 'POST' ([uri]($taskApiRoot + 'releases')) $taskReleaseJson
  }

@@ -30,6 +30,7 @@ namespace HYROLauncherWeb
     {
         private readonly string root;
         private readonly object gate = new object();
+        private readonly object steamGate = new object();
         private string token = "";
         private DateTime tokenExpires;
         private DateTime nextRequest;
@@ -93,6 +94,70 @@ namespace HYROLauncherWeb
         {
             return GetDetail(id, refresh);
         }
+        // Steam app IDs identify the actual release. Name search can select an
+        // expansion or another edition, so Steam details never use a fuzzy match.
+        public IgdbGameInfo GetForSteam(int appId, bool refresh)
+        {
+            if (appId <= 0) throw new InvalidOperationException("InvalidId");
+            lock (steamGate)
+            {
+                var link = ReadSteamLink(appId);
+                if (!refresh && link != null && link.UpdatedUtc > DateTime.UtcNow.AddDays(link.IgdbId == 0 ? -1 : -7))
+                    return link.IgdbId == 0 ? null : GetDetail(link.IgdbId, false);
+                int id = ParseSteamGameId(Query("fields game,uid,external_game_source; where external_game_source = 1 & uid = \"" + appId + "\"; limit 5;", "external_games"), appId);
+                var info = id > 0 ? GetDetail(id, refresh) : null;
+                WriteSteamLink(new SteamIgdbLink { AppId = appId, IgdbId = id, UpdatedUtc = DateTime.UtcNow });
+                return info;
+            }
+        }
+        public IgdbGameInfo CachedSteam(int appId)
+        {
+            var link = ReadSteamLink(appId);
+            return link != null && link.IgdbId > 0 ? Cached(link.IgdbId) : null;
+        }
+        public static int ParseSteamGameId(string payload, int appId)
+        {
+            if (appId <= 0) throw new InvalidOperationException("InvalidId");
+            var rows = new JavaScriptSerializer().Deserialize<List<Dictionary<string, object>>>(payload);
+            int match = 0;
+            foreach (var row in rows)
+            {
+                int source, game;
+                if (Text(row,"uid") != appId.ToString(System.Globalization.CultureInfo.InvariantCulture) ||
+                    !Int32.TryParse(Text(row,"external_game_source"), out source) || source != 1 ||
+                    !Int32.TryParse(Text(row,"game"), out game) || game <= 0) continue;
+                if (match > 0 && match != game) return 0;
+                match = game;
+            }
+            return match;
+        }
+        private class SteamIgdbLink
+        {
+            public int AppId { get; set; }
+            public int IgdbId { get; set; }
+            public DateTime UpdatedUtc { get; set; }
+        }
+        private SteamIgdbLink ReadSteamLink(int appId)
+        {
+            if (appId <= 0) return null;
+            try
+            {
+                string path = Path.Combine(root,"igdb-cache","steam-" + appId + ".json");
+                string text=LauncherCache.ReadText(root,path,65536);
+                var link = text != null ? new JavaScriptSerializer().Deserialize<SteamIgdbLink>(text) : null;
+                return link != null && link.AppId == appId && link.IgdbId >= 0 && link.UpdatedUtc <= DateTime.UtcNow.AddMinutes(5) ? link : null;
+            }
+            catch { return null; }
+        }
+        private void WriteSteamLink(SteamIgdbLink link)
+        {
+            try
+            {
+                string directory = Path.Combine(root,"igdb-cache");
+                LauncherCache.WriteText(root,Path.Combine(directory,"steam-" + link.AppId + ".json"),new JavaScriptSerializer().Serialize(link));
+            }
+            catch { /* Details remain available when the cache cannot be written. */ }
+        }
         public List<IgdbGameInfo> Explore(string mode)
         {
             long now=(long)(DateTime.UtcNow-new DateTime(1970,1,1,0,0,0,DateTimeKind.Utc)).TotalSeconds;
@@ -106,20 +171,23 @@ namespace HYROLauncherWeb
             if (!refresh && cached != null && cached.UpdatedUtc > DateTime.UtcNow.AddDays(-7)) return cached;
             var games = ParseGames(Query(Fields + "where id = " + id + "; limit 1;"));
             if (games.Count == 0) throw new InvalidOperationException("NotFound");
-            string directory = Path.Combine(root,"igdb-cache"); Directory.CreateDirectory(directory);
-            File.WriteAllText(Path.Combine(directory,id+".json"),new JavaScriptSerializer().Serialize(games[0]));
+            string directory = Path.Combine(root,"igdb-cache");
+            LauncherCache.WriteText(root,Path.Combine(directory,id+".json"),new JavaScriptSerializer().Serialize(games[0]));
             return games[0];
         }
         public IgdbGameInfo Cached(int id)
         {
             try {
                 var path = Path.Combine(root,"igdb-cache",id+".json");
-                var cached = File.Exists(path) ? new JavaScriptSerializer().Deserialize<IgdbGameInfo>(File.ReadAllText(path)) : null;
+                string text=LauncherCache.ReadText(root,path,4*1024*1024);
+                var cached = text != null ? new JavaScriptSerializer().Deserialize<IgdbGameInfo>(text) : null;
                 return cached != null && cached.Id == id ? cached : null;
             } catch { return null; }
         }
-        private string Query(string body)
+        private string Query(string body) { return Query(body,"games"); }
+        protected virtual string Query(string body, string endpoint)
         {
+            if (endpoint != "games" && endpoint != "external_games") throw new InvalidOperationException("InvalidEndpoint");
             lock (gate)
             {
                 string clientPath = Path.Combine(root,"assets","apikey","twitchclient.txt"), secretPath = Path.Combine(root,"assets","apikey","twitchsecret.txt");
@@ -139,7 +207,7 @@ namespace HYROLauncherWeb
                     int delay = (int)Math.Ceiling((nextRequest-DateTime.UtcNow).TotalMilliseconds);
                     if (delay>0) Thread.Sleep(delay);
                     nextRequest = DateTime.UtcNow.AddMilliseconds(300);
-                    try { return Request("https://api.igdb.com/v4/games",body,client,token); }
+                    try { return Request("https://api.igdb.com/v4/" + endpoint,body,client,token); }
                     catch (WebException ex)
                     {
                         var response = ex.Response as HttpWebResponse;

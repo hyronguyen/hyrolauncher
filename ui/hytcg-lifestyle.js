@@ -118,6 +118,7 @@
   }
   async function refresh() {
     if(state.pending)return state.pending;
+    if(state.busy||state.arenaAnimating)return state.data;
     const epoch=state.epoch;
     status(tx('Loading your world…','Đang tải thế giới của bạn…'));
     setBusy(true);
@@ -140,14 +141,20 @@
     return response;
   }
   function setBusy(value) {
-    $('lifestyleRefresh').disabled=value;
-    content.setAttribute('aria-busy',String(value));
+    $('lifestyleRefresh').disabled=value||Boolean(state.arenaAnimating);
+    content.setAttribute('aria-busy',String(value||state.arenaAnimating));
     renderBooster();
     for(const node of content.querySelectorAll('button')){if(value){if(!('lifeWasDisabled' in node.dataset))node.dataset.lifeWasDisabled=String(node.disabled);node.disabled=true;}else if('lifeWasDisabled' in node.dataset){node.disabled=node.dataset.lifeWasDisabled==='true';delete node.dataset.lifeWasDisabled;}}
   }
-  function render() {
+  function render(forceArena=false) {
     nav();
+    const busy=Boolean(state.busy||state.pending||state.arenaAnimating);
+    $('lifestyleRefresh').disabled=busy;
+    content.setAttribute('aria-busy',String(busy));
     if(!state.data)return;
+    // Theme/snapshot refreshes must keep the active action's actors mounted.
+    if(forceArena!==true&&state.view==='arena'&&state.arenaAnimating&&
+      content.querySelector('.arenaBattlefield')?.dataset.arenaBattle===state.arenaVisual?.id)return;
     const renderers={album:renderAlbum,studio:renderStudio,expedition:renderExpedition,inventory:renderInventory,arena:renderArena,dating:renderDating};
     const enhanced=window.HyTcgAdventure?.renderView(state.view);
     content.innerHTML=enhanced??renderers[state.view]();
@@ -158,7 +165,7 @@
     if(state.view==='album')bindAlbumDrag();
     if(state.view==='album'&&state.album)hydrateAlbumMetadata(state.album.cardIds.slice((state.albumPage||0)*12,(state.albumPage||0)*12+12));else{state.metadataWanted.clear();state.metadataQueue=[];}
     syncAvailability();
-    if(state.busy||state.pending)setBusy(true);
+    if(state.busy||state.pending||state.arenaAnimating)setBusy(true);
     updateTimers();
     renderBooster();
   }
@@ -179,7 +186,7 @@
     for(const node of content.querySelectorAll('.lifeCharacterButton')){const id=node.querySelector('[data-life-card]')?.dataset.lifeCard,label=node.querySelector(':scope > div > small');if(id&&label&&characterBusy(id))label.textContent=tx('Busy · claim expedition or finish upgrade','Đang bận · nhận thưởng hoặc hoàn tất nâng cấp');}
   }
   function startTimers() { clearInterval(state.timer);if(!$('lifestyleView').hidden&&!document.hidden)state.timer=setInterval(updateTimers,1000); }
-  function hide() { clearInterval(state.timer);state.timer=0;state.metadataWanted.clear();state.metadataQueue=[];nav(); }
+  function hide() { window.HyTcgAdventure?.cancelArena();clearInterval(state.timer);state.timer=0;state.metadataWanted.clear();state.metadataQueue=[];nav(); }
   function reset() {
     window.HyTcgAdventure?.reset();
     hide();state.epoch++;state.activation++;state.pending=null;state.busy=false;state.data=null;state.album=null;state.studio=null;state.studioId='';state.studioPanel='style';state.quote=null;state.quoteKey='';state.quoteGeneration++;clearTimeout(state.quoteTimer);state.itemPicker=null;state.paidOperation=null;state.lastDyeId='';state.datingId='';state.inventoryTarget='';state.inventoryFilter='all';state.inventoryQuery='';state.expeditionTeam=[];state.arenaTeam=[];state.result=null;state.canvasData='';state.extraCards.clear();state.extraProfiles.clear();state.metadataFailures.clear();state.imageCache.clear();state.imageVersions.clear();state.imageRevision=0;state.imageQueue=[];state.picker=null;clearTimeout(state.pickerTimer);
@@ -199,6 +206,7 @@
     for(const node of content.querySelectorAll('[data-life-reset]')){const left=Math.max(0,(Date.parse(field(gameplay(),'NextResetAt'))-serverNow())/1000);node.textContent=tx('Resets in ','Làm mới sau ')+duration(left);}
   }
   function open(view=state.view) {
+    if(view!==state.view)window.HyTcgAdventure?.cancelArena();
     if(Object.hasOwn(labels(),view))state.view=view;
     $('lifestyleView').hidden=false;
     nav();startTimers();
@@ -619,7 +627,7 @@
   $('lifestyleItemInventory').addEventListener('click',()=>{$('lifestyleItemPicker').close();state.itemPicker=null;state.view='inventory';render();});
   $('lifestyleItemPicker').addEventListener('close',()=>{state.itemPicker=null;});
   new MutationObserver(()=>{$('lifestyleView').hidden?hide():startTimers();}).observe($('lifestyleView'),{attributes:true,attributeFilter:['hidden']});
-  document.addEventListener('visibilitychange',()=>document.hidden?hide():startTimers());
+  document.addEventListener('visibilitychange',()=>{if(document.hidden)hide();else{startTimers();if(!$('lifestyleView').hidden&&!state.busy)render();}});
   window.HyTcgLifestyle={open,refresh,hide,reset,translate:()=>{nav();if(!$('lifestyleView').hidden)render();},showStudio:cardId=>activate('studio',cardId),showDating:cardId=>activate('dating',cardId),decorate,applySnapshot:data=>{apply(data);if(!$('lifestyleView').hidden)render();},getCosmetic:cosmetic};
   window.HyTcgLifestyle.renderBooster=renderBooster;
   window.HyTcgLifestyle.showView=view=>activate(view);

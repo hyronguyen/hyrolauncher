@@ -22,10 +22,12 @@ namespace HYROLauncherWeb
             string hash;
             using(var sha=SHA256.Create()) hash=BitConverter.ToString(sha.ComputeHash(original)).Replace("-","").ToLowerInvariant();
             string target=Path.Combine(cacheDirectory,hash+"-"+milliseconds+".gif");
-            if(File.Exists(target)) return target;
+            if(!LauncherCache.SafePath(cacheDirectory,target))return source;
+            if(File.Exists(target)) {LauncherCache.Touch(cacheDirectory,target);return target;}
             byte[] timed=Retime(original,milliseconds);
             Directory.CreateDirectory(cacheDirectory);
             File.WriteAllBytes(target,timed);
+            LauncherCache.Maintain(cacheDirectory,cacheDirectory,false);
             return target;
         }
 

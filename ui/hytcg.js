@@ -56,6 +56,8 @@ function phaseText(slot){
   return '';
 }
 function bindTheme(settings={}){
+  tcg.settings={...settings};
+  if(settings.DisableEffects)window.HyTcgArenaEffects?.stopAudio();
   tcg.language=settings.Language||tcg.language;
   const accent=/^#[0-9a-f]{6}$/i.test(settings.AccentColor||'')?settings.AccentColor:'#c49bf7';document.documentElement.style.setProperty('--accent',accent);
   document.body.classList.toggle('theme-light',settings.ThemeMode==='light');document.documentElement.lang=tcg.language;translate();

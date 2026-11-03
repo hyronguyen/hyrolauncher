@@ -1,0 +1,62 @@
+.systemDialog{box-sizing:border-box;width:min(820px,calc(100vw - 36px));height:min(720px,calc(100vh - 36px));display:flex;flex-direction:column;overflow:hidden;padding:0;color:#eff3fb;background:#121620}
+.systemHeader{display:flex;align-items:center;justify-content:space-between;padding:22px 24px 14px;gap:16px;flex-shrink:0}
+.systemHeader h2{font-size:21px;margin:0}
+.systemHeader .smallAction{display:flex;align-items:center;justify-content:center;min-height:36px}
+.systemTabs{display:flex;gap:5px;margin:0 24px 18px;padding:4px;background:#0b0f17;border:1px solid #ffffff0c;border-radius:11px;width:max-content;flex-shrink:0}
+.systemTabs button{border:0;border-radius:8px;padding:8px 19px;color:#a5b4cb;background:transparent;cursor:pointer;font-weight:700;font-size:12px}
+.systemTabs button[aria-selected=true]{color:#eff8ff;background:#263141}
+#systemGrid.systemGrid{display:block;flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;padding:0 24px 22px;scrollbar-width:thin}
+.systemStorageOverview{display:grid;grid-template-columns:1.2fr 1fr 1fr;gap:10px;margin-bottom:18px}
+.systemStorageOverview .systemItem{background:#1b2230;padding:16px 14px;border-color:#ffffff0c}
+.systemStorageOverview .systemValue{font-size:22px;letter-spacing:-.6px;font-variant-numeric:tabular-nums}
+.systemStorageOverview .storageReclaimable{border-color:color-mix(in srgb,var(--accent) 30%,transparent);background:color-mix(in srgb,var(--accent) 8%,#161d27)}
+.storageReclaimable .systemValue{color:var(--accent)}
+.systemCachePanel{border:1px solid #ffffff12;background:#181f2b;border-radius:16px;padding:16px}
+.systemCachePanel header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+.systemCachePanel h3{font-size:15px;margin:0 0 6px}
+.systemCachePanel p{font-size:11px;line-height:1.5;color:#a1b0c5;margin:0}
+.systemCachePanel .primary{display:flex;align-items:center;justify-content:center;gap:8px;min-height:40px;padding:9px 15px;white-space:nowrap;font-size:12px;border-radius:10px}
+.systemCachePanel button:disabled{opacity:.5;cursor:wait}
+.systemCacheRows{display:grid;grid-template-columns:1fr 1fr;gap:0 18px}
+.systemCacheRow{display:flex;align-items:center;gap:10px;min-height:64px;border-top:1px solid #ffffff0a}
+.systemCacheIcon{width:31px;height:31px;display:grid;place-items:center;flex-shrink:0;font-size:20px;color:var(--accent);border-radius:9px;background:#ffffff05}
+.systemCacheRow>span:nth-child(2){flex:1;min-width:0;display:grid;gap:4px}
+.systemCacheRow strong{font-size:12px;font-weight:650;overflow-wrap:anywhere}
+.systemCacheRow small{font-size:10px;color:#93a2b8}
+.systemCacheRow b{font-size:11px;font-variant-numeric:tabular-nums;white-space:nowrap;color:#cad5e7}
+.systemCacheStatus{font-size:12px;line-height:1.5;color:var(--accent);overflow-wrap:anywhere}
+.systemCacheStatus:not(:empty){padding-top:10px;border-top:1px solid #ffffff10}
+.systemCacheStatus.error{color:#ffb0b0}
+.systemStorageDetails{border:1px solid #ffffff10;border-radius:13px;margin-top:12px;padding:0 14px;background:#ffffff02}
+.systemStorageDetails summary{font-size:12px;font-weight:650;padding:14px 0;cursor:pointer;color:#c4d0e4}
+.systemDeviceGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.systemStorageDetails .systemDeviceGrid,.systemPaths{padding-bottom:14px}
+.systemPaths{display:grid;gap:8px}
+.systemPaths .systemValue{font-size:11px;font-weight:500;color:#acbcd1}
+.systemAdvancedActions{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px}
+.systemAdvancedActions button{min-height:38px}
+.systemDialog>.dialogActions{flex-shrink:0;margin:0;padding:14px 24px;border-top:1px solid #ffffff12;background:#151b25}
+.systemDialog>.dialogActions .primary{min-width:100px;min-height:40px}
+.systemLoading{display:flex;align-items:center;justify-content:center;gap:12px;min-height:220px;color:#b5c2d5;font-size:13px}
+.systemScanError{font-size:12px;line-height:1.5;margin:0 0 16px;color:#e6aeb5}
+body:has(.app.theme-light) #systemModal .systemScanError{color:#9b3441}
+.systemDialog button:focus-visible,.systemDialog summary:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+body:has(.app.theme-light) #systemModal .systemDialog{color:#1a2c44;background:#f8fafc;--ui-text:#1a2c44;--ui-field:#e9eef5;--ui-line:#ccd6e3}
+body:has(.app.theme-light) #systemModal .systemItem{background:#edf2f8;border-color:#21355418}
+body:has(.app.theme-light) #systemModal .systemLabel{color:#526780}
+body:has(.app.theme-light) #systemModal .storageReclaimable{background:color-mix(in srgb,var(--accent) 9%,#f8fafc);border-color:color-mix(in srgb,var(--accent) 32%,#ccd6e3)}
+body:has(.app.theme-light) #systemModal .storageReclaimable .systemValue,body:has(.app.theme-light) #systemModal .systemCacheStatus{color:color-mix(in srgb,var(--accent) 65%,#172033)}
+body:has(.app.theme-light) #systemModal .systemTabs{background:#e6ecf4;border-color:#15243a0d}
+body:has(.app.theme-light) #systemModal .systemTabs button{color:#55657a}
+body:has(.app.theme-light) #systemModal .systemTabs button[aria-selected=true]{background:#fff;color:#1a2c44;box-shadow:0 1px 4px #1d304214}
+body:has(.app.theme-light) #systemModal .systemCachePanel{background:#eef3f9;border-color:#21355418}
+body:has(.app.theme-light) #systemModal .systemCachePanel p,body:has(.app.theme-light) #systemModal .systemCacheRow small{color:#596b83}
+body:has(.app.theme-light) #systemModal .systemCacheRow{border-color:#2135540e}
+body:has(.app.theme-light) #systemModal .systemCacheRow b{color:#3d526e}
+body:has(.app.theme-light) #systemModal .systemCacheIcon{background:#ffffffb0}
+body:has(.app.theme-light) #systemModal .systemCacheStatus:not(:empty){border-color:#21355418}
+body:has(.app.theme-light) #systemModal .systemCacheStatus.error{color:#ac3441}
+body:has(.app.theme-light) #systemModal .systemStorageDetails{background:#fff8;border-color:#21355418}
+body:has(.app.theme-light) #systemModal .systemStorageDetails summary,body:has(.app.theme-light) #systemModal .systemPaths .systemValue,body:has(.app.theme-light) #systemModal .systemLoading{color:#526780}
+body:has(.app.theme-light) #systemModal .systemDialog>.dialogActions{background:#edf2f8;border-color:#21355418}
+@media(max-width:600px){.systemHeader{padding:18px 16px 12px}.systemTabs{margin:0 16px 14px}#systemGrid.systemGrid{padding:0 16px 16px}.systemStorageOverview{grid-template-columns:1fr 1fr}.systemStorageOverview>.systemItem:first-child{grid-column:1/-1}.systemStorageOverview .systemValue{font-size:21px}.systemCacheRows{grid-template-columns:1fr}.systemCachePanel header{align-items:stretch;flex-direction:column}.systemCachePanel .primary{align-self:flex-start}.systemDeviceGrid{grid-template-columns:1fr}.systemDialog>.dialogActions{padding:12px 16px}.systemHeader h2{font-size:18px}}

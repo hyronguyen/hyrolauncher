@@ -22,17 +22,20 @@ namespace HYROLauncherWeb
         private readonly ProgressBar progress = new ProgressBar();
         private readonly Button close = new Button();
         private readonly Color accent;
-        internal LauncherLoadingPanel(Color color, bool vietnamese)
+        private readonly Color backgroundHighlight;
+        internal LauncherLoadingPanel(Color color, bool vietnamese) : this(color,vietnamese,false) { }
+        internal LauncherLoadingPanel(Color color, bool vietnamese, bool cozy)
         {
             accent=color; Dock=DockStyle.Fill; DoubleBuffered=true;
-            BackColor=Color.FromArgb(9,13,22);
+            BackColor=cozy?Color.FromArgb(32,25,19):Color.FromArgb(9,13,22);
+            backgroundHighlight=cozy?Color.FromArgb(48,36,25):Color.FromArgb(19,31,46);
             status.Text=vietnamese?"Đang khởi động launcher…":"Starting launcher…";
-            status.ForeColor=Color.FromArgb(151,164,185);status.BackColor=Color.Transparent;
+            status.ForeColor=cozy?Color.FromArgb(205,187,167):Color.FromArgb(151,164,185);status.BackColor=Color.Transparent;
             status.Font=new Font("Segoe UI",10F);status.TextAlign=ContentAlignment.MiddleCenter;
             progress.Style=ProgressBarStyle.Marquee;progress.MarqueeAnimationSpeed=26;
             Controls.Add(status);Controls.Add(progress);
             close.Text=vietnamese?"Đóng":"Close";close.Visible=false;close.FlatStyle=FlatStyle.Flat;
-            close.FlatAppearance.BorderColor=color;close.ForeColor=color;close.BackColor=Color.FromArgb(19,27,39);
+            close.FlatAppearance.BorderColor=color;close.ForeColor=color;close.BackColor=cozy?Color.FromArgb(48,36,25):Color.FromArgb(19,27,39);
             close.Click+=delegate {var owner=FindForm() as WebLauncherForm;if(owner!=null)owner.ExitFailedStartup();};Controls.Add(close);
             Resize+=delegate {PlaceControls();};PlaceControls();
         }
@@ -46,7 +49,7 @@ namespace HYROLauncherWeb
         protected override void OnPaint(PaintEventArgs e)
         {
             base.OnPaint(e);
-            using(var brush=new LinearGradientBrush(ClientRectangle,Color.FromArgb(19,31,46),BackColor,65F))e.Graphics.FillRectangle(brush,ClientRectangle);
+            using(var brush=new LinearGradientBrush(ClientRectangle,backgroundHighlight,BackColor,65F))e.Graphics.FillRectangle(brush,ClientRectangle);
             using(var font=new Font("Segoe UI",36F,FontStyle.Bold))
             using(var brush=new SolidBrush(accent))
             using(var format=new StringFormat {Alignment=StringAlignment.Center,LineAlignment=StringAlignment.Center})
@@ -63,7 +66,7 @@ namespace HYROLauncherWeb
         private void InitializeStartupSurface()
         {
             Color color;try {color=ColorTranslator.FromHtml(state.Settings.AccentColor);}catch {color=Color.FromArgb(64,199,224);}
-            startupSurface=new LauncherLoadingPanel(color,state.Settings.Language=="vi");Controls.Add(startupSurface);startupSurface.BringToFront();
+            startupSurface=new LauncherLoadingPanel(color,state.Settings.Language=="vi",NormalizeThemeMode(state.Settings.ThemeMode)=="cozy");Controls.Add(startupSurface);startupSurface.BringToFront();
         }
         private void FinishStartupSurface()
         {

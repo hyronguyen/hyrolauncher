@@ -1,5 +1,44 @@
-const igdbDetails = new Map(), igdbRequested = new Set();
-let igdbTab = 'info', igdbCollapsed = false, igdbSearchRequest = '', igdbSearchResults = [], igdbViewerIndex = -1, igdbPreviewIndex = 0;
+const igdbDetails = new Map(), steamIgdbDetails = new Map(), igdbRequested = new Set();
+const igdbMemoryLimit = 128;
+function storeIgdbEntry(store,id,entry) {
+  store.delete(id);store.set(id,entry);
+  const pinned=[typeof selectedGame!=='undefined'&&selectedGame,typeof bookshelfPreviewId!=='undefined'&&state.Games?.find(game=>game.Id===bookshelfPreviewId),igdbViewerGame].filter(Boolean);
+  for(const [key,value] of store) {
+    if(store.size<=igdbMemoryLimit)break;
+    if(value.pending||pinned.some(game=>(store===steamIgdbDetails?Number(game.SteamAppId):Number(game.IgdbId))===key))continue;
+    store.delete(key);igdbRequested.delete(store===steamIgdbDetails?`steam:${key}`:key);
+  }
+}
+let igdbTab = 'info', igdbCollapsed = false, igdbSearchRequest = '', igdbSearchResults = [], igdbViewerIndex = -1, igdbPreviewIndex = 0, igdbViewerGame = null, igdbSteamAccount = '';
+function syncSteamIgdbAccount() {
+  const account = String(state.Settings.SteamId || '');
+  if (account === igdbSteamAccount) return;
+  igdbSteamAccount = account;
+  steamIgdbDetails.clear();
+  for (const key of igdbRequested) if (String(key).startsWith('steam:')) igdbRequested.delete(key);
+}
+function getGameIgdbEntry(game) {
+  if (!game) return;
+  if (game.SteamAppId) syncSteamIgdbAccount();
+  const store=game.SteamAppId?steamIgdbDetails:igdbDetails,id=Number(game.SteamAppId||game.IgdbId),entry=store.get(id);
+  if(entry){store.delete(id);store.set(id,entry);}
+  return entry;
+}
+function requestGameIgdb(game, refresh = false) {
+  if (!game || game.IsUrl || isPrivateLocked(game) || !(game.SteamAppId || Number(game.IgdbId) > 0)) return;
+  if (game.SteamAppId) {
+    syncSteamIgdbAccount();
+    if (game.SteamAccountId && game.SteamAccountId !== state.Settings.SteamId) return;
+  }
+  const key = game.SteamAppId ? `steam:${Number(game.SteamAppId)}` : Number(game.IgdbId);
+  if (!refresh && igdbRequested.has(key)) return;
+  const store = game.SteamAppId ? steamIgdbDetails : igdbDetails, id = Number(game.SteamAppId || game.IgdbId);
+  const old = store.get(id);
+  if (old?.pending) return;
+  igdbRequested.add(key);
+  storeIgdbEntry(store,id, {...old, pending:true});
+  post({type:'getIgdb', gameId:game.Id, ...(refresh ? {refresh:true} : {})});
+}
 function igdbText(vi,en) { return state.Settings.Language === 'vi' ? vi : en; }
 function igdbErrorText(code) {
   const messages = {
@@ -18,18 +57,18 @@ function igdbErrorText(code) {
 }
 function renderGameIntel() {
   const panel = document.getElementById('gameIntel'), game = selectedGame;
-  const visible = game && !game.IsUrl && !game.SteamAppId && !isPrivateLocked(game) && !document.getElementById('library').classList.contains('show');
+  const visible = game && !game.IsUrl && !isPrivateLocked(game) && !document.getElementById('library').classList.contains('show');
   panel.hidden = !visible;
   if (!visible) return;
   panel.classList.toggle('collapsed',igdbCollapsed);
-  const id = Number(game.IgdbId) || 0, entry = igdbDetails.get(id), info = entry && entry.info;
+  requestGameIgdb(game);
+  const id = Number(game.IgdbId) || 0, entry = getGameIgdbEntry(game), info = entry && entry.info;
   const shots=info && info.Screenshots || [], preview=shots.length ? shots[igdbPreviewIndex % shots.length] : game.BannerPath || info && info.Cover;
   document.getElementById('intelVisual').innerHTML=preview ? `<button class="intelPreview" onclick="${shots.length?'openIgdbViewer('+igdbPreviewIndex % shots.length+')':'openIgdbViewer(-1)'}"><img decoding="async" src="${escapeHtml(img(preview))}" alt="${escapeHtml(game.Name)}"></button>${shots.length>1?`<div class="intelPreviewNav"><button onclick="igdbPreviewIndex=(igdbPreviewIndex+${shots.length}-1)%${shots.length};renderGameIntel();syncHeroLayoutPosition()">‹</button><span>${igdbPreviewIndex % shots.length+1} / ${shots.length}</span><button onclick="igdbPreviewIndex=(igdbPreviewIndex+1)%${shots.length};renderGameIntel();syncHeroLayoutPosition()">›</button></div>`:''}` : '';
-  if (id && !igdbRequested.has(id)) { igdbRequested.add(id); post({type:'getIgdb',gameId:game.Id}); }
   document.getElementById('intelHead').innerHTML = `<button class="${igdbTab==='info'?'active':''}" onclick="igdbTab='info';renderGameIntel()">${igdbText('Thông tin','Info')}</button><button class="${igdbTab==='shots'?'active':''}" onclick="igdbTab='shots';renderGameIntel()">${igdbText('Ảnh','Screenshots')}</button><button class="intelRefresh" onclick="refreshGameIntel()" title="${igdbText('Làm mới','Refresh')}">${iconHtml(assets.svgReload,'small')}</button><button onclick="igdbCollapsed=!igdbCollapsed;renderGameIntel()" aria-label="${igdbText('Thu gọn/mở rộng','Collapse/expand')}">${igdbCollapsed?'＋':'−'}</button>`;
   let body = '';
-  if (!id) body = `<p>${igdbText('Liên kết game với IGDB để xem thông tin và ảnh.','Link this game to IGDB to view details and screenshots.')}</p><button class="intelLink" onclick="openEditor(selectedGame);openIgdbSearch()">${igdbText('Liên kết IGDB','Link IGDB')}</button>`;
-  else if (!info) body = `<p role="status">${entry && entry.error ? escapeHtml(igdbErrorText(entry.error)) : igdbText('Đang tải thông tin game…','Loading game details…')}</p>`;
+  if (!id && !game.SteamAppId) body = `<p>${igdbText('Liên kết game với IGDB để xem thông tin và ảnh.','Link this game to IGDB to view details and screenshots.')}</p><button class="intelLink" onclick="openEditor(selectedGame);openIgdbSearch()">${igdbText('Liên kết IGDB','Link IGDB')}</button>`;
+  else if (!info) body = `<p role="status">${entry && entry.error && !entry.pending ? escapeHtml(entry.error === 'NotFound' && game.SteamAppId ? igdbText('Chưa có dữ liệu IGDB cho game Steam này.','IGDB has no details for this Steam game yet.') : igdbErrorText(entry.error)) : igdbText('Đang tải thông tin game…','Loading game details…')}</p>`;
   else if (igdbTab==='shots') body = info.Screenshots.length ? `<div class="intelShots">${info.Screenshots.map((url,i)=>`<button onclick="openIgdbViewer(${i})"><img loading="lazy" decoding="async" src="${escapeHtml(url.replace('/t_screenshot_big/','/t_screenshot_med/'))}" alt="Screenshot ${i+1}"></button>`).join('')}</div>` : `<p>${igdbText('Chưa có ảnh trên IGDB.','No screenshots available on IGDB.')}</p>`;
   else body = `<div class="intelTags">${[info.ReleaseDate,info.Rating!=null?'★ '+info.Rating+'/100':'',...info.Genres].filter(Boolean).map(value=>`<span>${escapeHtml(value)}</span>`).join('')}</div><p class="intelSummary">${escapeHtml(info.Summary || igdbText('Chưa có mô tả.','No description available.'))}</p><button class="intelLink" onclick="openIgdbViewer(-1)">${igdbText('Xem thêm','Read more')}</button>`;
   if (info && entry.error) body += `<p role="status">${escapeHtml(igdbErrorText(entry.error))} ${igdbText('Đang dùng dữ liệu đã lưu.','Showing cached details.')}</p>`;
@@ -59,8 +98,7 @@ function constrainHeroToIntel(title,stage) {
   title.style.setProperty('--hero-left',result.x+'px');title.style.setProperty('--hero-top',result.y+'px');title.style.setProperty('--hero-width',result.width+'px');
 }
 function refreshGameIntel() {
-  if (!selectedGame || !selectedGame.IgdbId) return;
-  post({type:'getIgdb',gameId:selectedGame.Id,refresh:true});
+  requestGameIgdb(selectedGame,true);
 }
 function igdbEditorLabel() {
   document.getElementById('igdbLinkLabel').textContent = editing && editing.IgdbId ? `IGDB #${editing.IgdbId}` : igdbText('Chưa liên kết','Not linked');
@@ -88,7 +126,14 @@ function selectIgdbResult(index) {
 }
 function unlinkIgdb() { if(editing) { editing.IgdbId=0;igdbEditorLabel(); } }
 function handleIgdbMessage(msg) {
-  if (msg.type==='igdbInfo') { igdbDetails.set(msg.id,{info:msg.info,error:msg.error}); renderGameIntel(); syncHeroLayoutPosition(); }
+  if (msg.type==='igdbInfo') {
+    if (msg.steamAppId) {
+      if (msg.steamAccountId !== state.Settings.SteamId) return;
+      syncSteamIgdbAccount();
+      storeIgdbEntry(steamIgdbDetails,Number(msg.steamAppId),{info:msg.info,error:msg.error,pending:false});
+    } else storeIgdbEntry(igdbDetails,Number(msg.id),{info:msg.info,error:msg.error,pending:false});
+    renderGameIntel(); syncHeroLayoutPosition();
+  }
   if (msg.type==='igdbSearch' && msg.requestId===igdbSearchRequest && document.getElementById('igdbSearchModal').classList.contains('show')) {
     const container=document.getElementById('igdbResults');
     igdbSearchResults=msg.games || [];
@@ -98,8 +143,13 @@ function handleIgdbMessage(msg) {
   }
 }
 function openIgdbViewer(index) {
-  const entry=selectedGame && igdbDetails.get(selectedGame.IgdbId), info=entry && entry.info;
+  openGameIgdbViewer(selectedGame,index);
+}
+function openGameIgdbViewer(game,index=-1) {
+  if (!game || isPrivateLocked(game)) return;
+  const entry=getGameIgdbEntry(game), info=entry && entry.info;
   if (!info) return;
+  igdbViewerGame=game;
   igdbViewerIndex=index;
   const photo=index>=0 && info.Screenshots[index];
   document.getElementById('igdbViewerTitle').textContent=info.Name;
@@ -112,10 +162,10 @@ function openIgdbViewer(index) {
   document.getElementById('igdbViewerClose').focus();
 }
 function moveIgdbViewer(direction) {
-  const info=igdbDetails.get(selectedGame.IgdbId).info;
-  if(info.Screenshots.length) openIgdbViewer((igdbViewerIndex+direction+info.Screenshots.length)%info.Screenshots.length);
+  const info=getGameIgdbEntry(igdbViewerGame)?.info;
+  if(info?.Screenshots.length) openGameIgdbViewer(igdbViewerGame,(igdbViewerIndex+direction+info.Screenshots.length)%info.Screenshots.length);
 }
-function closeIgdbViewer() { document.getElementById('igdbViewer').classList.remove('show'); }
+function closeIgdbViewer() { document.getElementById('igdbViewer').classList.remove('show'); igdbViewerGame=null; }
 document.addEventListener('keydown',event=>{
   const viewer=document.getElementById('igdbViewer'), search=document.getElementById('igdbSearchModal');
   const modal=viewer.classList.contains('show') ? viewer : search.classList.contains('show') ? search : null;

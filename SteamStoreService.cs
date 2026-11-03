@@ -36,8 +36,8 @@ namespace HYROLauncherWeb
         private string CacheFile(string key) {
             using(var hash=System.Security.Cryptography.SHA256.Create()) return Path.Combine(root,"explore-cache",BitConverter.ToString(hash.ComputeHash(System.Text.Encoding.UTF8.GetBytes("store-v2:"+key))).Replace("-","")+".json");
         }
-        public ExploreSnapshot Cached(string key) {try {string path=CacheFile(key);return File.Exists(path)?json.Deserialize<ExploreSnapshot>(File.ReadAllText(path)):null;}catch{return null;}}
-        private void Save(string key,ExploreSnapshot result) {string path=CacheFile(key);Directory.CreateDirectory(Path.GetDirectoryName(path));File.WriteAllText(path,json.Serialize(result));}
+        public ExploreSnapshot Cached(string key) {try {string text=LauncherCache.ReadText(root,CacheFile(key),8*1024*1024);return text!=null?json.Deserialize<ExploreSnapshot>(text):null;}catch{return null;}}
+        private void Save(string key,ExploreSnapshot result) {LauncherCache.WriteText(root,CacheFile(key),json.Serialize(result));}
         private static string Fetch(string url) {
             ServicePointManager.SecurityProtocol|=SecurityProtocolType.Tls12;
             var request=(HttpWebRequest)WebRequest.Create(url);request.Timeout=20000;request.ReadWriteTimeout=20000;request.AllowAutoRedirect=false;
@@ -82,8 +82,8 @@ namespace HYROLauncherWeb
         }
         public List<SteamFilterOption> Filters(bool refresh) {
             string path=CacheFile("filters");List<SteamFilterOption> cached=null;
-            try {if(File.Exists(path)){cached=json.Deserialize<List<SteamFilterOption>>(File.ReadAllText(path));if(!refresh && File.GetLastWriteTimeUtc(path)>DateTime.UtcNow.AddDays(-7))return cached;}}catch{}
-            try {var result=ParseFilters(Fetch("https://store.steampowered.com/search/?specials=1&cc=vn&l=english"));if(result.Count<20)throw new InvalidOperationException("SteamFiltersUnavailable");Directory.CreateDirectory(Path.GetDirectoryName(path));File.WriteAllText(path,json.Serialize(result));return result;}catch{if(cached!=null)return cached;throw;}
+            try {string text=LauncherCache.ReadText(root,path,8*1024*1024);if(text!=null){cached=json.Deserialize<List<SteamFilterOption>>(text);if(!refresh && File.GetLastWriteTimeUtc(path)>DateTime.UtcNow.AddDays(-7))return cached;}}catch{}
+            try {var result=ParseFilters(Fetch("https://store.steampowered.com/search/?specials=1&cc=vn&l=english"));if(result.Count<20)throw new InvalidOperationException("SteamFiltersUnavailable");LauncherCache.WriteText(root,path,json.Serialize(result));return result;}catch{if(cached!=null)return cached;throw;}
         }
         public static List<int> ParseWishlist(string payload) {
             var data=new JavaScriptSerializer {MaxJsonLength=8*1024*1024}.Deserialize<Dictionary<string,object>>(payload);var response=Child(data,"response");

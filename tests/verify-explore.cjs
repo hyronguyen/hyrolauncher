@@ -25,5 +25,15 @@ run("selectExploreMode('home')");assert(nodes.exploreLibrary.innerHTML.includes(
 c.response={requestId:'obsolete',snapshot:{Games:[]}};run('handleExploreMessage(response)');
 c.currentCategory='All';run('renderExplore()');assert(nodes.exploreLibrary.hidden);
 c.state.Settings.LibraryLayout='carousel';run('exploreNavigation()');assert.equal(nodes.categories.children[1].innerHTML,'Explore');
+c.state.Settings.LibraryLayout='bookshelf';
+const cardMarkup=run("exploreCards([{Id:42,Name:'<Steam offer>',Source:'Steam',Discount:75,Price:'100.000 ₫',OriginalPrice:'400.000 ₫',Image:'cover.png'}],'deals:')");
+assert(cardMarkup.includes('exploreCard') && cardMarkup.includes('exploreArt') && !cardMarkup.includes('shelfCase'),'Explore keeps the original cover cards with bookshelf preference');
+assert(cardMarkup.includes('&lt;Steam offer>') && cardMarkup.includes('Steam offer'),'metadata remains escaped');
+assert(cardMarkup.includes('−75%') && cardMarkup.includes('400.000 ₫') && cardMarkup.includes('100.000 ₫'),'normal card prices and discounts retained');
+assert(cardMarkup.includes('onclick="openExploreGame(') && !cardMarkup.includes('selectExploreShelfCase'),'single click opens detail directly');
+c.currentCategory='__explore';run('renderExplore()');assert(nodes.exploreLibrary.innerHTML.includes('Scroll left') && nodes.exploreLibrary.innerHTML.includes('Scroll right'),'original row arrows shown even with bookshelf preference');
+run("exploreQuery='kept search';exploreMode='search';for(let i=0;i<80;i++){exploreCache.set('search:old-'+i,{Games:[]});exploreErrors.set('search:old-'+i,'Error');}exploreCache.set(exploreKey(),{Games:[{Id:999}]});trimExploreCaches()");
+assert(run('exploreCache.size')<=24 && run('exploreErrors.size')<=24,'unused search/filter caches bounded');
+assert(run("exploreCache.has('search:kept search') && exploreCache.has('new:') && exploreCache.has('upcoming:')"),'active search and home shelves retained during cache trimming');
 new vm.Script(fs.readFileSync('ui/index.html','utf8').match(/<script>([\s\S]*?)<\/script>/)[1]);
-console.log('PASS: dashboard concurrent sections, response isolation, pagination/dedup, failed-page retention, search, both layouts, escaped cards, lazy images and syntax.');
+console.log('PASS: dashboard sections, response isolation, pagination/dedup, cached errors, search, original Explore cards with every layout preference, direct detail action, navigation arrows, bounded unused cache, escaping and syntax.');

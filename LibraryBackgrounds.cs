@@ -84,7 +84,7 @@ namespace HYROLauncherWeb
             if (SteamLibraryService.NormalizeId(account) == "") throw new InvalidOperationException("SteamIdRequired");
             string cachePath = Path.Combine(directory, "background-cache", account + ".json");
             LibraryBackgroundCatalog cached = null;
-            try { if (File.Exists(cachePath)) cached = Parser.Deserialize<LibraryBackgroundCatalog>(File.ReadAllText(cachePath)); } catch { }
+            try { string text=LauncherCache.ReadText(directory,cachePath,16*1024*1024);if(text!=null)cached = Parser.Deserialize<LibraryBackgroundCatalog>(text); } catch { }
             if (!refresh && cached != null && cached.UpdatedUtc > DateTime.UtcNow.AddHours(-6)) return cached;
             var catalog = new LibraryBackgroundCatalog { SteamId = account, UpdatedUtc = DateTime.UtcNow, Items = new List<LibraryBackgroundItem>(), Warning = "" };
             var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -110,7 +110,7 @@ namespace HYROLauncherWeb
             }
             catch { catalog.Warning = "InventoryUnavailable"; }
             if (catalog.Items.Count == 0 && cached != null) { cached.Warning = "CachedBackgrounds"; return cached; }
-            Directory.CreateDirectory(Path.GetDirectoryName(cachePath)); File.WriteAllText(cachePath, Parser.Serialize(catalog));
+            LauncherCache.WriteText(directory,cachePath,Parser.Serialize(catalog));
             return catalog;
         }
     }

@@ -7,7 +7,7 @@ libraries, browser profiles, caches, test fixtures or real API credentials.
 Run from the repository root:
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File build-installer.ps1 -Version 1.0.0
+powershell -NoProfile -ExecutionPolicy Bypass -File build-installer.ps1 -Version 1.1.0
 ```
 
 The build automatically calls `packaging/download-tools.ps1` when its tools or
@@ -21,8 +21,8 @@ An installed Inno Setup 6.7+ can instead be supplied with `-CompilerPath`.
 
 Release outputs are under `output/release`:
 
-- `HYROLauncher-Setup-1.0.0.exe`: one offline installer, including prerequisites.
-- `HYROLauncher-Portable-1.0.0.zip`: app files; .NET 4.8 and WebView2 must already
+- `HYROLauncher-Setup-1.1.0.exe`: one offline installer, including prerequisites.
+- `HYROLauncher-Portable-1.1.0.zip`: app files; .NET 4.8 and WebView2 must already
   be installed for this portable version.
 - `SHA256SUMS.txt`: hashes for both distributable files.
 - `payload-manifest.json`: hashes of every clean app payload file.

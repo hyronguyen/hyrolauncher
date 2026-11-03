@@ -402,20 +402,24 @@
   <script src="dialogs.js"></script>
   <script src="ui-effects.js"></script>
   <script src="pet-motion.js"></script>
-  <script src="steam-library.js"></script>
+  <script src="steam-library.js?v=20261012-steam-rgb1"></script>
   <link rel="stylesheet" href="igdb.css">
-  <script src="igdb.js"></script>
-  <link rel="stylesheet" href="explore.css">
-  <script src="explore.js"></script>
-  <link rel="stylesheet" href="steam-store.css">
-  <script src="steam-store.js"></script>
-  <link rel="stylesheet" href="big-picture.css">
-  <script src="big-picture.js"></script>
+  <script src="igdb.js?v=20261012-storage-shelf1"></script>
+  <link rel="stylesheet" href="explore.css?v=20261012-explore-cards1">
+  <script src="explore.js?v=20261012-explore-cards1"></script>
+  <link rel="stylesheet" href="steam-store.css?v=20261012-explore-cards1">
+  <script src="steam-store.js?v=20261012-explore-cards1"></script>
+  <link rel="stylesheet" href="big-picture.css?v=20261012-storage-shelf1">
+  <script src="big-picture.js?v=20261012-explore-cards1"></script>
   <link rel="stylesheet" href="library-polish.css">
   <link rel="stylesheet" href="library-background.css">
-  <script src="library-background.js"></script>
-  <link rel="stylesheet" href="bookshelf.css?v=20261011-pull5s2">
-  <script src="bookshelf.js?v=20261011-pull5s2"></script>
+  <script src="library-background.js?v=20261013-cozy1"></script>
+  <link rel="stylesheet" href="bookshelf.css?v=20261012-storage-shelf1">
+  <script src="bookshelf.js?v=20261012-explore-cards1"></script>
+  <link rel="stylesheet" href="system-storage.css?v=20261012-storage-shelf1">
+  <script src="system-storage.js?v=20261012-storage-shelf1"></script>
+  <link rel="stylesheet" href="cozy-theme.css?v=20261013-cozy1">
+  <link rel="stylesheet" href="cozy-shelf.css?v=20261013-cozy1">
 </head>
 <body>
   <div id="app" class="app">
@@ -556,6 +560,7 @@
           <select id="sThemeMode" onchange="updateBackgroundPreview()">
             <option id="themeDarkOption" value="dark">Dark</option>
             <option id="themeLightOption" value="light">Light</option>
+            <option id="themeCozyOption" value="cozy">Cozy and chill</option>
             <option id="themeTranslucentOption" value="translucent">Translucent</option>
           </select>
         </div>
@@ -590,7 +595,9 @@
           <div class="settingRow"><label for="sBookshelfHoverLift">Hover lift distance</label><div class="bookshelfAnimationControl"><input id="sBookshelfHoverLift" data-bookshelf-setting="BookshelfHoverLift" type="range" min="0" max="15" oninput="updateBookshelfAnimationSetting(this)"><output id="vBookshelfHoverLift" for="sBookshelfHoverLift"></output></div></div>
           <div class="settingRow"><label for="sBookshelfDefaultAngle">Default game case angle</label><div class="bookshelfAnimationControl"><input id="sBookshelfDefaultAngle" data-bookshelf-setting="BookshelfDefaultAngle" type="range" min="0" max="40" oninput="updateBookshelfAnimationSetting(this)"><output id="vBookshelfDefaultAngle" for="sBookshelfDefaultAngle"></output></div></div>
           <div class="settingRow"><label for="sBookshelfSelectedAngle">Selected game angle</label><div class="bookshelfAnimationControl"><input id="sBookshelfSelectedAngle" data-bookshelf-setting="BookshelfSelectedAngle" type="range" min="0" max="15" oninput="updateBookshelfAnimationSetting(this)"><output id="vBookshelfSelectedAngle" for="sBookshelfSelectedAngle"></output></div></div>
-          <div class="settingRow"><label for="sBookshelfLightingIntensity">Environmental lighting</label><div class="bookshelfAnimationControl"><input id="sBookshelfLightingIntensity" data-bookshelf-setting="BookshelfLightingIntensity" type="range" min="0" max="100" oninput="updateBookshelfAnimationSetting(this)"><output id="vBookshelfLightingIntensity" for="sBookshelfLightingIntensity"></output></div></div>
+          <div class="settingRow"><label for="sBookshelfBacklightMode">Shelf backlight</label><select id="sBookshelfBacklightMode" data-bookshelf-setting="BookshelfBacklightMode" onchange="updateBookshelfAnimationSetting(this)"><option value="accent">Accent color</option><option value="rgb">RGB · Rainbow strip</option><option value="rgb-cycle">RGB · Synchronized colors</option></select></div>
+          <div class="settingRow" id="bookshelfRgbSpeedRow" hidden><label for="sBookshelfRgbSpeed">RGB color speed</label><div class="bookshelfAnimationControl"><input id="sBookshelfRgbSpeed" data-bookshelf-setting="BookshelfRgbSpeed" type="range" min="25" max="400" step="25" oninput="updateBookshelfAnimationSetting(this)"><output id="vBookshelfRgbSpeed" for="sBookshelfRgbSpeed"></output></div></div>
+          <div class="settingRow"><label for="sBookshelfLightingIntensity">Shelf backlight brightness</label><div class="bookshelfAnimationControl"><input id="sBookshelfLightingIntensity" data-bookshelf-setting="BookshelfLightingIntensity" type="range" min="0" max="100" oninput="updateBookshelfAnimationSetting(this)"><output id="vBookshelfLightingIntensity" for="sBookshelfLightingIntensity"></output></div></div>
           <div class="settingRow"><label for="sBookshelfReactiveLighting">Enable reactive lighting</label><input id="sBookshelfReactiveLighting" data-bookshelf-setting="BookshelfReactiveLighting" type="checkbox" onchange="updateBookshelfAnimationSetting(this)"></div>
         </section>
       </div>
@@ -680,16 +687,12 @@
     </div>
   </div>
 
-  <div id="systemModal" class="modal">
+  <div id="systemModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="systemTitle">
     <div class="dialog systemDialog">
-      <h2 id="systemTitle">System Info</h2>
-      <div id="systemGrid" class="systemGrid"></div>
+      <header class="systemHeader"><h2 id="systemTitle">System Info</h2><button id="systemRefreshBtn" class="smallAction" onclick="openSystemInfo(true)">Refresh</button></header>
+      <nav id="systemTabs" class="systemTabs" role="tablist" aria-label="System Info"></nav>
+      <div id="systemGrid" class="systemGrid" role="tabpanel"></div>
       <div class="dialogActions">
-        <div class="systemActionBar">
-          <button id="systemRefreshBtn" class="smallAction" onclick="openSystemInfo()">Refresh</button>
-          <button id="systemCleanupBtn" class="smallAction" onclick="cleanupUnusedAssets()">Clean assets</button>
-          <button id="systemClearWebBtn" class="danger" onclick="clearWebPageData()">Clear web data</button>
-        </div>
         <button id="systemOkBtn" class="primary" onclick="closeSystemInfo()">OK</button>
       </div>
     </div>
@@ -958,6 +961,9 @@
       }
       if (msg.type === 'systemInfo') {
         showSystemInfo(msg.info || {});
+      }
+      if (msg.type === 'cacheCleanup') {
+        handleCacheCleanup(msg);
       }
       if (msg.type === 'pluginClosed') {
         activePlugin = null;
@@ -1683,7 +1689,7 @@
       const accent = effectiveAccent();
       const gameAccent = effectiveGameAccent();
       const themeMode = normalizeThemeMode(state.Settings.ThemeMode || 'dark');
-      const back = themeMode === 'translucent' ? 'transparent' : themeMode === 'light' ? '#F4F7FB' : '#080A12';
+      const back = themeMode === 'translucent' ? 'transparent' : themeMode === 'light' ? '#F4F7FB' : themeMode === 'cozy' ? '#201913' : '#080A12';
       const position = sidebarPosition();
       const app = document.querySelector('.app');
       document.documentElement.style.setProperty('--accent', accent);
@@ -1692,8 +1698,10 @@
       document.documentElement.classList.toggle('theme-translucent', themeMode === 'translucent');
       document.body.classList.toggle('theme-translucent', themeMode === 'translucent');
       document.body.classList.toggle('theme-light', themeMode === 'light');
+      document.body.classList.toggle('theme-cozy', themeMode === 'cozy');
       document.body.dataset.language = state.Settings.Language || 'en';
       app.classList.toggle('theme-light', themeMode === 'light');
+      app.classList.toggle('theme-cozy', themeMode === 'cozy');
       app.classList.toggle('theme-translucent', themeMode === 'translucent');
       app.classList.toggle('disableEffects', !!state.Settings.DisableEffects);
       app.classList.toggle('card3d', (state.Settings.CardStyle || '2d').toLowerCase() === '3d');
@@ -1748,6 +1756,7 @@
       lThemeMode.textContent = tr('themeMode');
       themeDarkOption.textContent = tr('themeDark');
       themeLightOption.textContent = tr('themeLight');
+      themeCozyOption.textContent = 'Cozy and chill';
       themeTranslucentOption.textContent = tr('themeTranslucent');
       lCardStyle.textContent = tr('cardStyle');
       card2dOption.textContent = tr('card2d');
@@ -2543,64 +2552,6 @@
     }
     window.addEventListener('resize', () => { layoutGrid(); syncPluginPanel(); syncGameFeed(); });
     window.addEventListener('resize', syncHeroLayoutPosition);
-    function openSystemInfo() {
-      post({ type: 'getSystemInfo' });
-    }
-    function showSystemInfo(info) {
-      const machineRows = [
-        ['machineName', info.MachineName],
-        ['userName', info.UserName],
-        ['os', info.OS],
-        ['cpu', info.Cpu],
-        ['cores', info.Cores],
-        ['memory', info.Memory],
-        ['display', info.Display],
-        ['gamesCount', info.GamesCount],
-        ['pluginsCount', info.PluginsCount]
-      ].filter(row => row[1] !== undefined && row[1] !== null && row[1] !== '');
-      const storageRows = [
-        ['launcherStorageSize', info.LauncherStorageSize],
-        ['assetsSize', info.AssetsSize],
-        ['libraryAssetsSize', info.LibraryAssetsSize],
-        ['pluginAssetsSize', info.PluginAssetsSize],
-        ['builtInAssetsSize', info.BuiltInAssetsSize],
-        ['dataFileSize', info.DataFileSize],
-        ['webViewDataSize', info.WebViewDataSize],
-        ['assetFilesCount', info.AssetFilesCount]
-      ].filter(row => row[1] !== undefined && row[1] !== null && row[1] !== '');
-      const pathRows = [
-        ['appPath', info.AppPath],
-        ['dataPath', info.DataPath],
-        ['assetsPath', info.AssetsPath],
-        ['webViewData', info.WebViewData]
-      ].filter(row => row[1]);
-      const renderItem = (row, extraClass = '') => `<div class="systemItem ${extraClass}"><div class="systemLabel">${escapeHtml(tr(row[0]))}</div><div class="systemValue">${escapeHtml(row[1])}</div></div>`;
-      systemTitle.textContent = tr('systemInfo');
-      systemGrid.innerHTML = [
-        `<div class="systemSection">${escapeHtml(tr('machineSection'))}</div>`,
-        machineRows.map(row => renderItem(row)).join(''),
-        `<div class="systemSection">${escapeHtml(tr('storageUsage'))}</div>`,
-        storageRows.map(row => renderItem(row, 'storage')).join(''),
-        `<div class="systemSection">${escapeHtml(tr('data'))}</div>`,
-        pathRows.map(row => renderItem(row)).join('')
-      ].join('');
-      systemRefreshBtn.textContent = tr('refresh');
-      systemCleanupBtn.textContent = tr('cleanupAssets');
-      systemClearWebBtn.textContent = tr('clearWebData');
-      systemOkBtn.textContent = tr('ok');
-      document.getElementById('systemModal').classList.add('show');
-    }
-    function closeSystemInfo() {
-      document.getElementById('systemModal').classList.remove('show');
-    }
-    async function cleanupUnusedAssets() {
-      if (!await appConfirm(tr('cleanupAssetsConfirm'))) return;
-      post({ type: 'cleanupUnusedAssets' });
-    }
-    async function clearWebPageData() {
-      if (!await appConfirm(tr('clearWebDataConfirm'))) return;
-      post({ type: 'clearWebPageData' });
-    }
     function updateLayoutSettingsVisibility() {
       const carousel = sLibraryLayout.value === 'carousel';
       const defaultLayout = sLibraryLayout.value === 'default';
@@ -2769,7 +2720,7 @@
     }
     function normalizeThemeMode(value) {
       value = String(value || 'dark').toLowerCase();
-      return ['dark', 'light', 'translucent'].includes(value) ? value : 'dark';
+      return ['dark', 'light', 'translucent', 'cozy'].includes(value) ? value : 'dark';
     }
     function clampInt(value, fallback, min, max) {
       const parsed = parseInt(value, 10);

@@ -5,8 +5,22 @@ const c={state:{Settings:{LibraryLayout:'default',Language:'en'}},document:{addE
 c.window={addEventListener:(name,fn)=>handlers[name]=fn};
 vm.createContext(c);vm.runInContext(fs.readFileSync('ui/big-picture.js','utf8'),c);const run=s=>vm.runInContext(s,c);
 assert(!run('isCarouselLayout()'));run('bigPictureActive=true');assert(run('isCarouselLayout()'));assert.equal(c.state.Settings.LibraryLayout,'default');run('bigPictureActive=false');assert(!run('isCarouselLayout()'));
+c.state.Settings.LibraryLayout='bookshelf';run('bigPictureActive=true');assert(!run('isCarouselLayout()'),'Big Picture must retain the selected bookshelf layout');run('bigPictureActive=false');assert(!run('isCarouselLayout()'));c.state.Settings.LibraryLayout='carousel';assert(run('isCarouselLayout()'));c.state.Settings.LibraryLayout='default';
+c.shelfFace={id:'',dataset:{bookAction:'select'},closest:selector=>selector==='[data-book-case]'?{dataset:{bookCase:'game-fixture'}}:null,getAttribute:()=>null,textContent:'Game fixture'};
+assert.equal(run('bigPictureKey(shelfFace)'),'book:game-fixture:select','shelf focus identity does not depend on title or changing artwork');
+c.shelfFavorite={...c.shelfFace,dataset:{bookAction:'favorite'}};assert.equal(run('bigPictureKey(shelfFavorite)'),'book:game-fixture:favorite');
+c.exploreFace={id:'',dataset:{},closest:selector=>selector==='.exploreCard[data-explore-id]'?{dataset:{exploreKey:'new:',exploreSource:'IGDB',exploreId:'123'}}:null,getAttribute:()=>null,textContent:'Explore fixture'};
+assert.equal(run('bigPictureKey(exploreFace)'),'explore:new:|IGDB:123','ordinary Explore cards preserve stable focus by cache key/source/id');
+c.exploreFace.textContent='Renamed and reordered Explore fixture';c.exploreFace.getAttribute=()=>"openExploreGame(9,'new:')";assert.equal(run('bigPictureKey(exploreFace)'),'explore:new:|IGDB:123','Explore focus identity survives labels and list-index changes');
+c.bookRect={left:70,top:180,width:78,height:235};c.caseFace={matches:()=>true,closest:()=>({getBoundingClientRect:()=>c.bookRect}),getBoundingClientRect:()=>({left:90,top:180,width:160,height:235})};assert.deepEqual(run('bigPictureNavigationRect(caseFace)'),c.bookRect,'directional navigation uses the fixed slot instead of a rotating cover');
 c.origin={left:0,top:0,width:100,height:100};c.candidates=[{element:'right',rect:{left:110,top:0,width:100,height:100}},{element:'down',rect:{left:0,top:110,width:100,height:100}},{element:'diagonal',rect:{left:80,top:180,width:100,height:100}}];
 assert.equal(run("chooseSpatialTarget(origin,candidates,'right')"),'right');assert.equal(run("chooseSpatialTarget(origin,candidates,'down')"),'down');assert.equal(run("chooseSpatialTarget(origin,candidates,'left')"),null);
+const oldGetElement=c.document.getElementById,oldRestore=c.restoreBigPictureFocus;let category='',exploreBack='';
+c.document.getElementById=id=>id==='library'?{classList:{contains:()=>true}}:oldGetElement(id);c.restoreBigPictureFocus=()=>{};c.currentCategory='__explore';c.exploreMode='home';c.bookshelfSelectedId='retained-library-selection';c.selectCategory=value=>category=value;c.clearExploreShelfSelection=()=>{throw new Error('Explore must not use case retraction');};
+run('bigPictureBack()');assert.equal(category,'All','ordinary Explore home Back returns to All directly even when library uses bookshelf');
+c.currentCategory='__explore';c.exploreMode='dealsBrowse';c.closeSteamDeals=()=>exploreBack='deals';run('bigPictureBack()');assert.equal(exploreBack,'deals','Explore deals Back preserves normal browse navigation');
+c.exploreMode='search';c.selectExploreMode=mode=>exploreBack=mode;run('bigPictureBack()');assert.equal(exploreBack,'home','Explore search Back preserves normal home navigation');
+c.document.getElementById=oldGetElement;c.restoreBigPictureFocus=oldRestore;
 let actions=[];c.moveBigPicture=d=>actions.push(d);c.activateBigPicture=()=>actions.push('accept');c.bigPictureBack=()=>actions.push('back');c.bigPictureSearch=()=>actions.push('search');c.openBigPictureMenu=()=>actions.push('menu');
 c.pad={buttons:Array.from({length:16},()=>({pressed:false})),axes:[0,0]};c.pad.buttons[0].pressed=true;run('processBigPicturePad(pad,0);processBigPicturePad(pad,500)');assert.deepEqual(actions,['accept'],'held A must not double activate');c.pad.buttons[0].pressed=false;run('processBigPicturePad(pad,510)');c.pad.buttons[0].pressed=true;run('processBigPicturePad(pad,520)');assert.equal(actions.length,2);
 actions=[];c.pad.buttons[0].pressed=false;c.pad.axes=[.6,0];run('processBigPicturePad(pad,600);processBigPicturePad(pad,900);processBigPicturePad(pad,951)');assert.deepEqual(actions,['right','right'],'analog repeat delay');
@@ -14,4 +28,4 @@ const mapped=run('nativeToGamepad({buttons:4096|8192|8|16,x:.75,y:-.75})');asser
 run('toggleBigPicture()');assert.equal(c.sent.type,'setBigPicture');assert.equal(c.sent.enabled,true);
 run('bigPictureActive=true;startBigPicturePolling()');assert.equal(run('bigPictureFrame'),1);handlers.blur();assert.equal(run('bigPictureFrame'),0);assert.equal(run('bigPictureHeld.size'),0);handlers.focus();assert.equal(run('bigPictureFrame'),1);
 const inline=fs.readFileSync('ui/index.html','utf8').match(/<script>([\s\S]*?)<\/script>/)[1];new vm.Script(inline);
-console.log('PASS: Big Picture temporary Carousel override, spatial navigation, analog repeat/deadzone, A edge activation, XInput mapping, native fullscreen request and syntax.');
+console.log('PASS: Big Picture preserves bookshelf/default carousel behavior, stable library/ordinary Explore keys and Back navigation, fixed-slot navigation, spatial navigation, analog repeat/deadzone, A edge activation, XInput mapping, native fullscreen request and syntax.');

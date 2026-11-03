@@ -85,7 +85,12 @@ internal static class VerifyHyTcgPerformance
         Check(page.Items.Count==40 && page.Total==120 && page.HasMore && page.NextOffset==40,"native metadata pagination");
         Check(Counter(economy,"imageReads")==40 && Counter(economy,"imageDecryptions")==40 && Counter(economy,"previewGenerations")==40,"cold page touches only 40 cards");
         long warm=Time(delegate {page=service.Collection(0,"","",false,"name");});
-        Check(Counter(economy,"imageReads")==80 && Counter(economy,"imageDecryptions")==40 && Counter(economy,"previewGenerations")==40 && Counter(economy,"previewMemoryHits")==40,"warm page reauthenticates bytes without decryption or resize");
+        long warmMemoryHits=Counter(economy,"previewMemoryHits"),warmDiskHits=Counter(economy,"previewDiskHits");
+        Console.WriteLine("Warm preview reuse: RAM="+warmMemoryHits+", authenticated disk="+warmDiskHits);
+        // Larger redesigned card previews may exceed the intentionally bounded
+        // 8MB RAM cache. Authenticated disk previews are equally valid reuse and
+        // must still avoid decoding the full card or generating another resize.
+        Check(Counter(economy,"imageReads")==80 && Counter(economy,"imageDecryptions")==40 && Counter(economy,"previewGenerations")==40 && warmMemoryHits+warmDiskHits==40,"warm page reauthenticates bytes and reuses bounded RAM/disk previews without decryption or resize");
         string cacheDirectory=Path.Combine(newRoot,"hytcg-previews");var files=Directory.GetFiles(cacheDirectory,"*.hypreview");Check(files.Length==40,"encrypted persistent previews");
         foreach(string path in files.Take(3))
         {
@@ -111,6 +116,9 @@ internal static class VerifyHyTcgPerformance
         var rebuild=new HyTcgEconomy(newRoot);var rebuiltService=new HyTcgService(newRoot,new NoNetwork(),rebuild);initialized=rebuiltService.Economy;
         for(int offset=0;offset<120;offset+=40)rebuiltService.Collection(offset,"","",false,"name");
         Check(Counter(rebuild,"previewGenerations")>=1,"tampered preview cache is rejected and regenerated");
+        // A full collection pass can legitimately evict earlier disk previews
+        // under the 32MB budget; select two currently retained entries to swap.
+        files=Directory.GetFiles(cacheDirectory,"*.hypreview");
         string a=files[1],b=files[2];byte[] aa=File.ReadAllBytes(a),bb=File.ReadAllBytes(b);File.WriteAllBytes(a,bb);File.WriteAllBytes(b,aa);
         var swapped=new HyTcgEconomy(newRoot);var swapService=new HyTcgService(newRoot,new NoNetwork(),swapped);initialized=swapService.Economy;
         // Validate every page: shuffled ciphertext cannot be reused for another source hash.

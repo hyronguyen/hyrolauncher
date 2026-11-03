@@ -1,0 +1,87 @@
+/* Wooden cabinet surfaces only. The existing case geometry, lamp pseudo-element,
+   RGB animation, controls and artwork remain owned by bookshelf.css. */
+.app.theme-cozy .library.bookshelfLibrary{
+  --cabinet-bg:var(--cozy-panel,#30251e);
+  --cabinet-border:#76583e;
+  --cabinet-text:var(--cozy-text,#f5e9d5);
+  --cabinet-muted:var(--cozy-muted,#c9b49c);
+  --cabinet-edge:#896543;
+  background:radial-gradient(ellipse at 45% 0%,#bb895224,transparent 65%),#201913;
+}
+/* Slightly irregular, static grain gives the walnut a quiet material texture. */
+.app.theme-cozy .gameCabinet{
+  border-color:#795a3e;
+  background:
+    repeating-linear-gradient(0deg,#f3cc9008 0 1px,transparent 1px 9px,#1a0e080e 9px 10px,transparent 10px 27px),
+    repeating-linear-gradient(2deg,transparent 0 36px,#cf986313 36px 38px,transparent 38px 81px),
+    linear-gradient(90deg,#6b4b30,#422c1e 7%,#4d3423 94%,#725033),#483221;
+  box-shadow:inset 1px 0 #f3d09a24,inset -1px 0 #190e0999,0 14px 30px #140b0860,0 3px 0 #130c08;
+}
+.app.theme-cozy .cabinetHeading{
+  border-color:#9b754b60;
+  background:
+    repeating-linear-gradient(0deg,#f6d8a20a 0 1px,transparent 1px 8px,#20120b0d 8px 9px,transparent 9px 22px),
+    linear-gradient(180deg,#a77c4b12,transparent 42%,#1e110d35),
+    linear-gradient(100deg,#765436,#513923 65%,#6b4a2f),#5b4029;
+  box-shadow:inset 0 1px #f3d09a28,inset 0 -1px #20120b55;
+}
+.app.theme-cozy .cabinetHeading h2{color:#f8e9cf;text-shadow:0 1px 1px #24150fc0}
+.app.theme-cozy .cabinetHeading h2>span{color:var(--cozy-highlight,#e4b87b)}
+.app.theme-cozy .cabinetHeading small{background:#22170b59;color:#edd4ad;box-shadow:inset 0 1px #e1ba7d18}
+.app.theme-cozy .cabinetHeading>button{color:#dbc5a5}
+.app.theme-cozy .cabinetHeading>button:hover{color:#fff0d3}
+.app.theme-cozy .cabinetCases{
+  --cozy-shelf-grain:repeating-linear-gradient(1deg,#dca86909 0 1px,transparent 1px 12px,#100a060c 12px 13px,transparent 13px 34px);
+  --cozy-shelf-vein:repeating-linear-gradient(-1deg,transparent 0 47px,#bc865507 47px 49px,transparent 49px 103px);
+  --cozy-shelf-recess:linear-gradient(90deg,#170d09a3,transparent 9%,transparent 90%,#170d09a3),linear-gradient(#24170f,#3e2c1d 22%,#352418 84%,#684828 85%,#382519);
+  border-left-color:#755132;
+  border-right-color:#59402a;
+  background:
+    radial-gradient(ellipse at 50% 0%,color-mix(in srgb,var(--accent) calc(var(--cabinet-light)*24%),transparent),transparent 72%),
+    radial-gradient(ellipse at 50% 100%,color-mix(in srgb,var(--accent) calc(var(--cabinet-light)*8%),transparent),transparent 65%),
+    var(--cozy-shelf-grain),var(--cozy-shelf-vein),var(--cozy-shelf-recess),#382719;
+  box-shadow:inset 0 12px 18px -10px #140b09e6,inset 12px 0 17px -12px #0e0806,inset -12px 0 17px -12px #0e0806,inset 1px 0 #e5b57e24,inset -1px 0 #2a180a;
+}
+/* Lamp modes retain their original moving strip. Its wash sits over the wood,
+   with the same brightness input; the grain itself never changes or animates. */
+.app.theme-cozy .bookshelfRgbBacklight .cabinetCases{
+  background:
+    radial-gradient(ellipse at 15% 0%,rgb(255 100 159 / calc(var(--cabinet-light)*.22)),transparent 50%),
+    radial-gradient(ellipse at 50% 0%,rgb(112 239 185 / calc(var(--cabinet-light)*.17)),transparent 55%),
+    radial-gradient(ellipse at 85% 0%,rgb(137 165 255 / calc(var(--cabinet-light)*.23)),transparent 50%),
+    var(--cozy-shelf-grain),var(--cozy-shelf-vein),var(--cozy-shelf-recess),#382719;
+}
+.app.theme-cozy .bookshelfRgbCycleBacklight .cabinetCases{
+  background:var(--cozy-shelf-grain),var(--cozy-shelf-vein),var(--cozy-shelf-recess),#382719;
+}
+.app.theme-cozy .cabinetCases::after{
+  border-top-color:#ebc48b70;
+  border-bottom-color:#28160d;
+  background:
+    repeating-linear-gradient(1deg,#f2cd990d 0 1px,transparent 1px 5px,#28140c20 5px 6px,transparent 6px 13px),
+    linear-gradient(180deg,#dab37c 0%,#9b6d40 15%,#805431 55%,#674226 78%,#3b2618 100%),#805431;
+  box-shadow:0 7px 12px #11090799,inset 0 1px #ffe5b544,inset 0 -2px #321a0d66;
+}
+.app.theme-cozy .cabinetDetail{
+  border-color:#99724973;
+  background:
+    repeating-linear-gradient(1deg,#e5c69903 0 1px,transparent 1px 18px),
+    linear-gradient(150deg,#3c2d21,#2f241c 70%),#30251e;
+  box-shadow:0 20px 40px #110a075e,inset 0 1px #f0cea71a;
+}
+.app.theme-cozy .cabinetDetailArt{background:#3b2b1e}
+.app.theme-cozy .cabinetDetailTag{color:var(--cozy-highlight,#e4b87b)}
+.app.theme-cozy .cabinetDetailMeta>span{background:#e4b87b0f;color:#d5bd9f}
+.app.theme-cozy .cabinetDetailTabs small{background:#e4b87b12;color:#e4b87b}
+.app.theme-cozy .cabinetDetailShots button{background:#3b2b1e;border-color:#9b795345}
+.app.theme-cozy .cabinetDetailFooter{
+  background:
+    repeating-linear-gradient(0deg,#edc99206 0 1px,transparent 1px 11px),
+    linear-gradient(#483221,#35251a),#3c2c20;
+  border-color:#98714350;
+  box-shadow:0 -8px 18px #30251eb3,inset 0 1px #e5ba7912;
+}
+.app.theme-cozy .cabinetPlay{background:var(--cozy-highlight,#e4b87b);color:#291b10;box-shadow:0 4px 15px #190e0959,inset 0 1px #fff0d54d}
+.app.theme-cozy :is(.cabinetOpen,.cabinetDetailFavorite){background:#eac28a0a;border-color:#a8825447;color:#ecd6b7}
+.app.theme-cozy .cabinetDetailFavorite[aria-pressed=true]{color:var(--cozy-highlight,#e4b87b)}
+.app.theme-cozy .cabinetNotice,.app.theme-cozy .cabinetEmpty{background:#33261e;border-color:#8f6b454f}

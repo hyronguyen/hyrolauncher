@@ -472,6 +472,11 @@ namespace HYROLauncherWeb
     internal sealed partial class HyTcgService
     {
         private bool storageMigrated;
+        internal void ClearTransientImageCaches()
+        {
+            // Never initialize or mutate a wallet just to clear pictures.
+            if(economy!=null)economy.ClearImageCaches();
+        }
         internal string ReadCardImage(string cardId) { return Economy.ReadCardImage(cardId); }
         internal void PrepareCollectionImages(List<HyTcgCollectionItem> items) { Economy.PopulateImagePreviews(items); }
     }

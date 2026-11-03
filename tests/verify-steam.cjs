@@ -10,7 +10,7 @@ const c = {state:{Games:[],Settings:{SteamId:'76561198000000000',Language:'en',L
  escapeHtml:s=>String(s||'').replace(/</g,'&lt;').replace(/"/g,'&quot;'),iconHtml:()=>'',labelWithIcon:s=>s,tr:s=>s,isPrivateLocked:g=>!!g.Private,isMovieWebsite:()=>false,
  displayName:g=>g.Private?'Private':g.Name,displayIcon:g=>g.IconPath,img:(p,f)=>p||f,sortLibraryGames:games=>games.slice(),clampInt:(n,d,min,max)=>Math.max(min,Math.min(max,n||d)),
  uiEffects:{play:k=>sounds.push(k)},post:m=>sent.push(m),selectCategory:k=>c.currentCategory=k,ensurePrivateAccess:()=>true,applyTheme(){},render(){}};
-c.isCarouselLayout=()=>c.state.Settings.LibraryLayout==='carousel';c.bigPictureActive=false;
+c.isCarouselLayout=()=>c.state.Settings.LibraryLayout==='carousel';c.isBookshelfLayout=()=>false;c.bigPictureActive=false;
 vm.createContext(c);
 vm.runInContext(fs.readFileSync('ui/steam-library.js','utf8'),c);
 for(const [start,end] of [['function libraryCard(', 'let carouselFeaturedId'],['function layoutGrid(', 'function getSidebarGames('],['function selectGame(', 'function showLibrary('],['function launchSelected(', 'function toggleWebFullscreen(']]) vm.runInContext(main.slice(main.indexOf(start),main.indexOf(end,main.indexOf(start))),c);

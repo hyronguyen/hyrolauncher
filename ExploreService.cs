@@ -43,7 +43,7 @@ namespace HYROLauncherWeb
             using(var hash=SHA256.Create()) return Path.Combine(root,"explore-cache",BitConverter.ToString(hash.ComputeHash(Encoding.UTF8.GetBytes(mode+":"+(query??"").Trim().ToLowerInvariant()))).Replace("-","")+".json");
         }
         public ExploreSnapshot Cached(string mode,string query)
-        { try { string path=CachePath(mode,query);return File.Exists(path)?new JavaScriptSerializer().Deserialize<ExploreSnapshot>(File.ReadAllText(path)):null; } catch {return null;} }
+        { try { string text=LauncherCache.ReadText(root,CachePath(mode,query),8*1024*1024);return text!=null?new JavaScriptSerializer {MaxJsonLength=8*1024*1024}.Deserialize<ExploreSnapshot>(text):null; } catch {return null;} }
         public ExploreSnapshot Get(string mode,string query,bool refresh)
         { return GetPage(mode,query,refresh,0); }
         public ExploreSnapshot CachedPage(string mode,string query,int offset)
@@ -67,8 +67,8 @@ namespace HYROLauncherWeb
                 foreach(var game in mode=="search"?igdb.Search(query):igdb.Explore(mode)) games.Add(new ExploreGame {Id=game.Id,Name=game.Name,Image=game.Screenshots.Count>0?game.Screenshots[0]:game.Cover,Summary=game.Summary,ReleaseDate=game.ReleaseDate,Rating=game.Rating,Source="IGDB",Url=game.Url,Price="",OriginalPrice=""});
             }
             var result=new ExploreSnapshot {UpdatedUtc=DateTime.UtcNow,Games=games,HasMore=page!=null && page.HasMore,NextOffset=page==null?0:page.NextOffset};
-            string path=CachePath(mode,mode=="deals"?"catalog-v2:"+offset:query);Directory.CreateDirectory(Path.GetDirectoryName(path));
-            File.WriteAllText(path,new JavaScriptSerializer().Serialize(result));
+            string path=CachePath(mode,mode=="deals"?"catalog-v2:"+offset:query);
+            LauncherCache.WriteText(root,path,new JavaScriptSerializer {MaxJsonLength=8*1024*1024}.Serialize(result));
             return result;
         }
         private static string Text(Dictionary<string,object> row,string name) { return row.ContainsKey(name)?Convert.ToString(row[name]):""; }

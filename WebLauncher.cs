@@ -6,6 +6,7 @@ using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.IO;
 using System.IO.Compression;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
@@ -163,7 +164,7 @@ namespace HYROLauncherWeb
         public LauncherSettings()
         {
             BookshelfAnimationsEnabled=true;BookshelfPullDuration=300;BookshelfHoverDuration=150;BookshelfPullDistance=40;
-            BookshelfHoverLift=4;BookshelfDefaultAngle=20;BookshelfSelectedAngle=0;BookshelfLightingIntensity=50;BookshelfReactiveLighting=true;
+            BookshelfHoverLift=4;BookshelfDefaultAngle=20;BookshelfSelectedAngle=0;BookshelfLightingIntensity=50;BookshelfReactiveLighting=true;BookshelfBacklightMode="accent";BookshelfRgbSpeed=100;
         }
         public string Title { get; set; }
         public string AccentColor { get; set; }
@@ -176,6 +177,8 @@ namespace HYROLauncherWeb
         public int BookshelfDefaultAngle { get; set; }
         public int BookshelfSelectedAngle { get; set; }
         public int BookshelfLightingIntensity { get; set; }
+        public string BookshelfBacklightMode { get; set; }
+        public int BookshelfRgbSpeed { get; set; }
         public bool BookshelfReactiveLighting { get; set; }
         public string CarouselDisplay { get; set; }
         public int CarouselColumns { get; set; }
@@ -242,6 +245,7 @@ namespace HYROLauncherWeb
         private bool exitRequested;
         private readonly IgdbService igdb = new IgdbService(AppDomain.CurrentDomain.BaseDirectory);
         private readonly HashSet<int> igdbPending = new HashSet<int>();
+        private readonly HashSet<string> steamIgdbPending = new HashSet<string>();
         private SteamLibraryCache steamLibrary = new SteamLibraryCache { Games = new List<SteamGame>() };
         private string steamStatus = "idle";
         private string steamError = "";
@@ -292,6 +296,11 @@ namespace HYROLauncherWeb
 
             dataPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "launcher-data.json");
             state = LoadState();
+            if(NormalizeThemeMode(state.Settings.ThemeMode)=="cozy")
+            {
+                BackColor=Color.FromArgb(32,25,19);
+                webView.DefaultBackgroundColor=BackColor;
+            }
             SaveState();
 
             Controls.Add(webView);
@@ -433,8 +442,9 @@ namespace HYROLauncherWeb
             else if (type == "importData") ImportData();
             else if (type == "validatePin") ValidatePin(msg);
             else if (type == "changePin") ChangePin(msg);
-            else if (type == "getSystemInfo") SendSystemInfo();
+            else if (type == "getSystemInfo") SendSystemInfo(GetBool(msg, "refresh"));
             else if (type == "cleanupUnusedAssets") CleanupUnusedAssets();
+            else if (type == "cleanLauncherCache") CleanLauncherCache();
             else if (type == "clearWebPageData") ClearWebPageData();
             else if (type == "setWindowVisuals") ApplyWindowVisuals(GetString(msg, "themeMode"));
             else if (type == "launchPlugin") LaunchPlugin(GetString(msg, "id"));
@@ -581,7 +591,8 @@ namespace HYROLauncherWeb
         private async void GetIgdb(Dictionary<string,object> msg)
         {
             GameEntry game = state.Games.Find(g => g.Id == GetString(msg,"gameId"));
-            if (game==null || game.IgdbId<=0) return;
+            if (game==null) { GetSteamIgdb(msg); return; }
+            if (game.IgdbId<=0) return;
             int id=game.IgdbId;
             if (!igdbPending.Add(id)) return;
             IgdbGameInfo cached=igdb.Cached(id);
@@ -597,6 +608,30 @@ namespace HYROLauncherWeb
                 if (!IsDisposed) Post(new Dictionary<string,object> { {"type","igdbInfo"},{"id",id},{"info",cached},{"error",IgdbError(ex)} });
             }
             finally { igdbPending.Remove(id); }
+        }
+        private async void GetSteamIgdb(Dictionary<string,object> msg)
+        {
+            string account = state.Settings.SteamId ?? "", gameId = GetString(msg,"gameId");
+            if (account == "" || steamLibrary.SteamId != account || steamLibrary.Games == null) return;
+            SteamGame game = steamLibrary.Games.Find(g => "steam-" + account + "-" + g.AppId == gameId);
+            if (game == null || game.AppId <= 0 || !steamIgdbPending.Add(gameId)) return;
+            IgdbGameInfo cached = igdb.CachedSteam(game.AppId);
+            if (cached != null) SendSteamIgdb(gameId,account,game.AppId,cached,"");
+            try
+            {
+                bool force = GetBool(msg,"refresh");
+                var info = await Task.Run(() => igdb.GetForSteam(game.AppId,force));
+                SendSteamIgdb(gameId,account,game.AppId,info,info == null ? "NotFound" : "");
+            }
+            catch (Exception ex) { SendSteamIgdb(gameId,account,game.AppId,cached,IgdbError(ex)); }
+            finally { steamIgdbPending.Remove(gameId); }
+        }
+        private void SendSteamIgdb(string gameId,string account,int appId,IgdbGameInfo info,string error)
+        {
+            if (IsDisposed || account != state.Settings.SteamId || steamLibrary.SteamId != account ||
+                steamLibrary.Games == null || !steamLibrary.Games.Exists(g => g.AppId == appId)) return;
+            Post(new Dictionary<string,object> { {"type","igdbInfo"},{"gameId",gameId},{"steamAppId",appId},
+                {"steamAccountId",account},{"id",info == null ? 0 : info.Id},{"info",info},{"error",error} });
         }
         private static string IgdbError(Exception ex)
         {
@@ -714,7 +749,10 @@ namespace HYROLauncherWeb
             Activate();
         }
 
-        private void SendSystemInfo()
+        private Task<Dictionary<string, object>> systemStorageTask;
+        private DateTime systemStorageScannedUtc;
+        private bool cacheCleanupBusy;
+        private async void SendSystemInfo(bool refresh = false)
         {
             Dictionary<string, object> info = new Dictionary<string, object>();
             info["MachineName"] = Environment.MachineName;
@@ -729,37 +767,80 @@ namespace HYROLauncherWeb
             info["DataPath"] = dataPath;
             info["AssetsPath"] = AssetsDir;
             info["WebViewData"] = WebViewUserDataDir;
-            ulong dataFileSize = GetFileSize(dataPath);
-            ulong assetsSize = GetDirectorySize(AssetsDir);
-            ulong libraryAssetsSize = GetDirectorySize(LibraryAssetsDir);
-            ulong pluginAssetsSize = GetDirectorySize(PluginAssetsDir);
-            ulong builtInAssetsSize = GetDirectorySize(BuiltInPluginPacksDir);
-            ulong webViewDataSize = GetDirectorySize(WebViewUserDataDir);
-            info["LauncherStorageSize"] = FormatBytes(dataFileSize + assetsSize + webViewDataSize);
-            info["DataFileSize"] = FormatBytes(dataFileSize);
-            info["AssetsSize"] = FormatBytes(assetsSize);
-            info["LibraryAssetsSize"] = FormatBytes(libraryAssetsSize);
-            info["PluginAssetsSize"] = FormatBytes(pluginAssetsSize);
-            info["BuiltInAssetsSize"] = FormatBytes(builtInAssetsSize);
-            info["WebViewDataSize"] = FormatBytes(webViewDataSize);
-            info["AssetFilesCount"] = CountFiles(AssetsDir).ToString();
             info["GamesCount"] = state == null || state.Games == null ? "0" : state.Games.Count.ToString();
             info["PluginsCount"] = state == null || state.Plugins == null ? "0" : state.Plugins.Count.ToString();
-            Post(new Dictionary<string, object> { { "type", "systemInfo" }, { "info", info } });
+            // Coalesce repeated requests and perform directory enumeration off the
+            // UI thread. Opening this panel repeatedly reuses its last snapshot.
+            if(refresh && systemStorageTask!=null && !systemStorageTask.IsCompleted)
+                try { await systemStorageTask; } catch { }
+            if(systemStorageTask==null || systemStorageTask.IsFaulted || systemStorageTask.IsCanceled ||
+                (systemStorageTask.IsCompleted && (refresh || systemStorageScannedUtc<DateTime.UtcNow.AddSeconds(-60))))
+            {
+                systemStorageTask=Task.Run(() => ReadSystemStorage()); systemStorageScannedUtc=DateTime.UtcNow;
+            }
+            try { foreach(var pair in await systemStorageTask)info[pair.Key]=pair.Value; }
+            catch { info["StorageError"]="StorageUnavailable"; }
+            if(!IsDisposed)Post(new Dictionary<string, object> { { "type", "systemInfo" }, { "info", info } });
         }
 
-        private void CleanupUnusedAssets()
+        private Dictionary<string,object> ReadSystemStorage()
         {
-            int deleted = 0;
-            deleted += CleanupUnusedAssetFolders(LibraryAssetsDir, GetValidGameAssetIds());
-            deleted += CleanupUnusedAssetFolders(PluginAssetsDir, GetValidPluginAssetIds());
-            Notify("Cleaned unused launcher assets: " + deleted + " folder(s).");
-            SendSystemInfo();
+            string root=AppDomain.CurrentDomain.BaseDirectory;
+            var snapshot=LauncherCache.ReadStorage(root,WebViewUserDataDir);
+            var categories=snapshot.Categories;
+            long cacheBytes=categories.Sum(item=>item.Bytes);
+            return new Dictionary<string,object> {
+                {"LauncherStorageSize",LauncherCache.FormatBytes(snapshot.OwnedBytes+snapshot.WebBytes)},
+                {"DataFileSize",FormatBytes(GetFileSize(dataPath))},
+                {"AssetsSize",LauncherCache.FormatBytes(snapshot.AssetBytes)},
+                {"LibraryAssetsSize",LauncherCache.FormatBytes(snapshot.LibraryBytes)},
+                {"PluginAssetsSize",LauncherCache.FormatBytes(snapshot.PluginBytes)},
+                {"BuiltInAssetsSize",LauncherCache.FormatBytes(snapshot.BuiltInBytes)},
+                {"WebViewDataSize",LauncherCache.FormatBytes(snapshot.WebBytes)},
+                {"AssetFilesCount",snapshot.AssetFiles.ToString()},
+                {"CardsSize",LauncherCache.FormatBytes(snapshot.CardBytes)},
+                {"CacheCategories",categories}, {"CacheSize",LauncherCache.FormatBytes(cacheBytes)},
+                {"ReclaimableSize",LauncherCache.FormatBytes(cacheBytes)}, {"ReclaimableBytes",cacheBytes},
+                {"ManagedCacheBytes",cacheBytes}, {"CacheFileCount",categories.Sum(item=>item.Files)},
+                {"StorageScannedUtc",DateTime.UtcNow.ToString("o",System.Globalization.CultureInfo.InvariantCulture)}
+            };
+        }
+
+        private async void CleanLauncherCache()
+        {
+            if(cacheCleanupBusy)return; cacheCleanupBusy=true;
+            Post(new Dictionary<string,object>{{"type","cacheCleanup"},{"busy",true}});
+            try
+            {
+                string root=AppDomain.CurrentDomain.BaseDirectory;
+                long before=await Task.Run(() => LauncherCache.Inspect(root,WebViewUserDataDir).Sum(item=>item.Bytes));
+                // DiskCache excludes cookies, DOM storage, saved logins and history.
+                try { if(webView!=null && webView.CoreWebView2!=null)await webView.CoreWebView2.Profile.ClearBrowsingDataAsync(CoreWebView2BrowsingDataKinds.DiskCache); } catch { }
+                var result=await Task.Run(() => {
+                    if(hyTcg!=null)hyTcg.ClearTransientImageCaches();
+                    var cleaned=LauncherCache.Clean(root,WebViewUserDataDir);
+                    long after=LauncherCache.Inspect(root,WebViewUserDataDir).Sum(item=>item.Bytes);
+                    cleaned.FreedBytes=Math.Max(cleaned.FreedBytes,Math.Max(0,before-after));cleaned.FreedSize=LauncherCache.FormatBytes(cleaned.FreedBytes);return cleaned;
+                });
+                if(!IsDisposed)Post(new Dictionary<string,object>{{"type","cacheCleanup"},{"busy",false},{"freedBytes",result.FreedBytes},{"freedSize",result.FreedSize},{"deletedFiles",result.DeletedFiles},{"skippedFiles",result.SkippedFiles},{"error",""}});
+            }
+            catch { if(!IsDisposed)Post(new Dictionary<string,object>{{"type","cacheCleanup"},{"busy",false},{"error","CacheCleanupFailed"}}); }
+            finally { cacheCleanupBusy=false; }
+            SendSystemInfo(true);
+        }
+
+        private async void CleanupUnusedAssets()
+        {
+            var gameIds=GetValidGameAssetIds();var pluginIds=GetValidPluginAssetIds();
+            int deleted=await Task.Run(() => CleanupUnusedAssetFolders(LibraryAssetsDir,gameIds)+CleanupUnusedAssetFolders(PluginAssetsDir,pluginIds));
+            if(!IsDisposed)Notify("Cleaned unused launcher assets: " + deleted + " folder(s).");
+            SendSystemInfo(true);
         }
 
         private HashSet<string> GetValidGameAssetIds()
         {
             HashSet<string> ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            AddReferencedAssetIds(ids,LibraryAssetsDir);
             if (state == null || state.Games == null) return ids;
             foreach (GameEntry game in state.Games)
             {
@@ -772,6 +853,7 @@ namespace HYROLauncherWeb
         private HashSet<string> GetValidPluginAssetIds()
         {
             HashSet<string> ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            AddReferencedAssetIds(ids,PluginAssetsDir);
             if (state == null || state.Plugins == null) return ids;
             foreach (PluginEntry plugin in state.Plugins)
             {
@@ -779,6 +861,33 @@ namespace HYROLauncherWeb
                 ids.Add(SafeAssetId(plugin.Id));
             }
             return ids;
+        }
+
+        private void AddReferencedAssetIds(HashSet<string> ids,string assetRoot)
+        {
+            // A game can reuse another game's artwork; tracks, pets, watchlist
+            // posters and the launcher background can reference these folders too.
+            // Preserve any referenced owner folder, irrespective of its old ID.
+            if(state==null)return;
+            try { CollectReferencedAssetIds(serializer.DeserializeObject(serializer.Serialize(state)),assetRoot,ids); } catch { }
+        }
+        private static void CollectReferencedAssetIds(object value,string assetRoot,HashSet<string> ids)
+        {
+            string text=value as string;
+            if(text!=null)
+            {
+                try
+                {
+                    if(String.IsNullOrWhiteSpace(text) || IsRemoteUrl(text))return;
+                    string root=EnsureTrailingSeparator(Path.GetFullPath(assetRoot)),full=ResolveStoredAssetPath(text);
+                    if(IsUnderDirectory(full,root)) {string relative=full.Substring(root.Length);string owner=relative.Split(Path.DirectorySeparatorChar,Path.AltDirectorySeparatorChar)[0];if(owner!="")ids.Add(owner);}
+                }
+                catch { }
+                return;
+            }
+            var dictionary=value as Dictionary<string,object>;
+            if(dictionary!=null){foreach(var item in dictionary.Values)CollectReferencedAssetIds(item,assetRoot,ids);return;}
+            var items=value as IEnumerable;if(items!=null)foreach(object item in items)CollectReferencedAssetIds(item,assetRoot,ids);
         }
 
         private static int CleanupUnusedAssetFolders(string rootDir, HashSet<string> validIds)
@@ -796,8 +905,7 @@ namespace HYROLauncherWeb
                     if (validIds.Contains(name)) continue;
                     try
                     {
-                        Directory.Delete(full, true);
-                        deleted++;
+                        if(LauncherCache.DeleteUnusedAssetDirectory(rootDir,full))deleted++;
                     }
                     catch { }
                 }
@@ -821,7 +929,7 @@ namespace HYROLauncherWeb
 
             int deleted = DeleteKnownWebViewDataFolders(WebViewUserDataDir);
             Notify("Cleared webpage data. Removed " + deleted + " cache folder(s). Restart launcher if a few WebView files are still locked.");
-            SendSystemInfo();
+            SendSystemInfo(true);
         }
 
         internal static Task ClearBrowsingDataForViewAsync(WebView2 view)
@@ -891,8 +999,7 @@ namespace HYROLauncherWeb
                 string root = EnsureTrailingSeparator(Path.GetFullPath(rootDir));
                 string target = Path.GetFullPath(targetDir);
                 if (!IsUnderDirectory(target, root)) return false;
-                Directory.Delete(target, true);
-                return true;
+                return LauncherCache.DeleteDirectoryTree(rootDir,target);
             }
             catch { return false; }
         }
@@ -1989,6 +2096,8 @@ namespace HYROLauncherWeb
             state.Settings.BookshelfDefaultAngle=ClampInt(GetString(settingsObj,"BookshelfDefaultAngle"),state.Settings.BookshelfDefaultAngle,0,40);
             state.Settings.BookshelfSelectedAngle=ClampInt(GetString(settingsObj,"BookshelfSelectedAngle"),state.Settings.BookshelfSelectedAngle,0,15);
             state.Settings.BookshelfLightingIntensity=ClampInt(GetString(settingsObj,"BookshelfLightingIntensity"),state.Settings.BookshelfLightingIntensity,0,100);
+            if(settingsObj.ContainsKey("BookshelfBacklightMode")){string mode=GetString(settingsObj,"BookshelfBacklightMode");state.Settings.BookshelfBacklightMode=mode=="rgb"||mode=="rgb-cycle"?mode:"accent";}
+            state.Settings.BookshelfRgbSpeed=ClampInt(GetString(settingsObj,"BookshelfRgbSpeed"),state.Settings.BookshelfRgbSpeed,25,400);
             state.Settings.CarouselDisplay=GetString(settingsObj,"CarouselDisplay")=="all"?"all":"scroll";
             state.Settings.CarouselColumns=ClampInt(GetString(settingsObj,"CarouselColumns"),5,1,10);
             state.Settings.ControllerGlyphs=GetString(settingsObj,"ControllerGlyphs")=="playstation"?"playstation":"xbox";
@@ -2016,10 +2125,11 @@ namespace HYROLauncherWeb
 
         private void ApplyWindowVisuals(string themeMode)
         {
-            bool translucent = String.Equals(NormalizeThemeMode(themeMode), "translucent", StringComparison.OrdinalIgnoreCase);
+            string normalized=NormalizeThemeMode(themeMode);
+            bool translucent = String.Equals(normalized, "translucent", StringComparison.OrdinalIgnoreCase);
             Color keyColor = Color.FromArgb(1, 2, 3);
             Color transparentBack = Color.Transparent;
-            Color normalBack = Color.FromArgb(8, 10, 18);
+            Color normalBack = normalized=="cozy" ? Color.FromArgb(32,25,19) : Color.FromArgb(8, 10, 18);
             BackColor = translucent ? keyColor : normalBack;
             TransparencyKey = translucent ? keyColor : Color.Empty;
             try
@@ -2162,6 +2272,8 @@ namespace HYROLauncherWeb
             input.Settings.BookshelfDefaultAngle=Math.Max(0,Math.Min(40,input.Settings.BookshelfDefaultAngle));
             input.Settings.BookshelfSelectedAngle=Math.Max(0,Math.Min(15,input.Settings.BookshelfSelectedAngle));
             input.Settings.BookshelfLightingIntensity=Math.Max(0,Math.Min(100,input.Settings.BookshelfLightingIntensity));
+            input.Settings.BookshelfBacklightMode=input.Settings.BookshelfBacklightMode=="rgb"||input.Settings.BookshelfBacklightMode=="rgb-cycle"?input.Settings.BookshelfBacklightMode:"accent";
+            input.Settings.BookshelfRgbSpeed=Math.Max(25,Math.Min(400,input.Settings.BookshelfRgbSpeed));
             input.Settings.CarouselDisplay=input.Settings.CarouselDisplay=="all"?"all":"scroll";
             input.Settings.CarouselColumns=input.Settings.CarouselColumns>0?ClampInt(input.Settings.CarouselColumns.ToString(),5,1,10):5;
             input.Settings.ControllerGlyphs=input.Settings.ControllerGlyphs=="playstation"?"playstation":"xbox";
@@ -3387,7 +3499,7 @@ namespace HYROLauncherWeb
         private static string NormalizeThemeMode(string value)
         {
             value = (value ?? "").Trim().ToLowerInvariant();
-            if (value == "light" || value == "translucent") return value;
+            if (value == "light" || value == "translucent" || value == "cozy") return value;
             return "dark";
         }
 
@@ -4871,11 +4983,12 @@ namespace HYROLauncherWeb
 
         public void ApplyWindowVisuals(string themeMode)
         {
-            bool translucent = String.Equals(WebLauncherForm.NormalizeThemeModeForWindows(themeMode), "translucent", StringComparison.OrdinalIgnoreCase);
+            string normalized=WebLauncherForm.NormalizeThemeModeForWindows(themeMode);
+            bool translucent = String.Equals(normalized, "translucent", StringComparison.OrdinalIgnoreCase);
             Color keyColor = Color.FromArgb(1, 2, 3);
-            BackColor = translucent ? keyColor : Color.FromArgb(10, 13, 23);
+            BackColor = translucent ? keyColor : normalized=="cozy" ? Color.FromArgb(32,25,19) : Color.FromArgb(10, 13, 23);
             TransparencyKey = translucent ? keyColor : Color.Empty;
-            try { browser.DefaultBackgroundColor = translucent ? Color.Transparent : Color.FromArgb(11, 15, 25); } catch { }
+            try { browser.DefaultBackgroundColor = translucent ? Color.Transparent : normalized=="cozy" ? Color.FromArgb(32,25,19) : Color.FromArgb(11, 15, 25); } catch { }
             WebLauncherForm.ApplyRoundedRegion(this, 18);
         }
 

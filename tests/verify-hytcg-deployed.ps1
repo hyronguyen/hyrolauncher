@@ -25,6 +25,9 @@ if(@($taskCards | Where-Object {!$_.FileName.EndsWith('.hycard')}).Count){throw 
 foreach($taskAsset in @('index.html','steam-library.js','bookshelf.js','bookshelf.css','hytcg.html','hytcg.js','hytcg.css','hytcg-renderer.js','hytcg-lifestyle.js','hytcg-lifestyle.css','hytcg-adventure.js','hytcg-adventure.css','hytcg-dev.js','hytcg-dev.css','hytcg-frame-repair.js','hytcg-rarity.js','hytcg-effects.js','hytcg-effects.css','rarities/common.svg','rarities/uncommon.svg','rarities/rare.svg','rarities/sr.svg','rarities/ssr.svg','rarities/ur.svg','scenes/meadow.svg','scenes/observatory.svg','scenes/ruins.svg','scenes/arena.svg','scenes/bond.svg')) {
  if((Get-FileHash -LiteralPath (Join-Path (Join-Path $ProjectRoot 'ui') $taskAsset)).Hash -ne (Get-FileHash -LiteralPath (Join-Path (Join-Path $taskDist 'ui') $taskAsset)).Hash){throw 'Deployed UI asset does not match verified source'}
 }
+foreach($taskNewAsset in @('ui/cozy-theme.css','ui/cozy-shelf.css','ui/library-background.js','ui/igdb.js','ui/system-storage.js','ui/system-storage.css','ui/big-picture.js','ui/big-picture.css','ui/explore.js','ui/explore.css','ui/steam-store.js','ui/steam-store.css','ui/hytcg-arena-effects.js','ui/hytcg-arena-effects.css','assets/hytcg/attack effect.mp3','assets/hytcg/burst effect.mp3','assets/hytcg/healing effect.mp3')) {
+ if((Get-FileHash -LiteralPath (Join-Path $ProjectRoot $taskNewAsset)).Hash -ne (Get-FileHash -LiteralPath (Join-Path $taskDist $taskNewAsset)).Hash){throw 'Deployed UI or effect does not match verified source'}
+}
 if((Get-FileHash -LiteralPath (Join-Path $ProjectRoot 'assets/icons/hytcg.svg')).Hash -ne (Get-FileHash -LiteralPath (Join-Path $taskDist 'assets/icons/hytcg.svg')).Hash){throw 'Deployed HYTCG icon does not match verified source'}
 if($BeforeClone){
  $taskBeforeRoot=[IO.Path]::GetFullPath($BeforeClone)

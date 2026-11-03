@@ -1,4 +1,4 @@
-param([string]$InstallerPath = '', [string]$Version = '1.0.0')
+param([string]$InstallerPath = '', [string]$Version = '1.1.0')
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
 if (!$InstallerPath) { $InstallerPath = Join-Path $root ('output\release\HYROLauncher-Setup-' + $Version + '.exe') }

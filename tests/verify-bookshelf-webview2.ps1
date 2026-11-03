@@ -1,4 +1,4 @@
-param([switch]$Reduced,[switch]$Baseline)
+param([switch]$Reduced,[switch]$Baseline,[switch]$RgbOnly)
 . (Join-Path $PSScriptRoot 'test-runtime.ps1')
 
 $ErrorActionPreference='Stop'
@@ -12,7 +12,7 @@ $taskCompiler=Join-Path $env:WINDIR 'Microsoft.NET/Framework64/v4.0.30319/csc.ex
 $taskExecutable=Join-Path $taskOutput 'verify.exe'
 & $taskCompiler /nologo /target:exe /out:$taskExecutable /reference:System.dll /reference:System.Core.dll /reference:System.Drawing.dll /reference:System.Windows.Forms.dll /reference:System.Web.Extensions.dll ('/reference:'+(Join-Path $taskOutput 'Microsoft.Web.WebView2.Core.dll')) ('/reference:'+(Join-Path $taskOutput 'Microsoft.Web.WebView2.WinForms.dll')) (Join-Path $TestSourceRoot 'verify-bookshelf-webview2.cs')
 if($LASTEXITCODE -ne 0){throw 'Native bookshelf WebView2 host compilation failed'}
-$taskArguments=@('normal');if($Reduced){$taskArguments=@('reduced')};if($Baseline){$taskArguments+=@('baseline')}
+$taskArguments=@('normal');if($Reduced){$taskArguments=@('reduced')};if($Baseline){$taskArguments+=@('baseline')}else{$taskArguments+=@('assert')};if($RgbOnly){$taskArguments+=@('rgb')}
 $taskProcess=Start-Process -FilePath $taskExecutable -ArgumentList $taskArguments -WorkingDirectory $taskOutput -WindowStyle Hidden -RedirectStandardOutput (Join-Path $taskOutput 'stdout.txt') -RedirectStandardError (Join-Path $taskOutput 'stderr.txt') -PassThru
 $null=$taskProcess.Handle
 if(-not $taskProcess.WaitForExit(30000)){$taskProcess.Kill();throw ('Native bookshelf WebView2 timed out: '+$taskOutput)}

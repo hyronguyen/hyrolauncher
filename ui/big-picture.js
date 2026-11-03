@@ -1,6 +1,6 @@
-let bigPictureActive=false,bigPictureFrame=0,bigPictureNativePad={connected:false},bigPictureFocusKey='',bigPictureKeyboardTarget=null;
+let bigPictureActive=false,bigPictureFrame=0,bigPictureNativePad={connected:false},bigPictureFocusKey='',bigPictureLibraryFocusKey='',bigPictureKeyboardTarget=null;
 const bigPictureHeld=new Map();
-function isCarouselLayout(){return bigPictureActive || state.Settings.LibraryLayout==='carousel';}
+function isCarouselLayout(){return state.Settings.LibraryLayout!=='bookshelf' && (bigPictureActive || state.Settings.LibraryLayout==='carousel');}
 function controllerGlyph(action){const ps=state.Settings.ControllerGlyphs==='playstation',buttons=ps?{accept:['✕','ps-cross'],back:['○','ps-circle'],favorite:['□','ps-square'],search:['△','ps-triangle']}:{accept:['A','xbox-a'],back:['B','xbox-b'],favorite:['X','xbox-x'],search:['Y','xbox-y']};const glyph=buttons[action];return `<b class="controllerGlyph ${glyph[1]}">${glyph[0]}</b>`;}
 function renderControllerHints(){
  const hints=document.querySelector('#bigPictureFooter .bigPictureHints'),ps=state.Settings.ControllerGlyphs==='playstation';
@@ -15,13 +15,19 @@ function switchBigPictureTab(direction){
  focusBigPicture(document.querySelector('#categories > .cat.active') || bigPictureCandidates()[0]);
  document.getElementById('libraryBody').scrollTop=0;
 }
-function favoriteBigPictureCard(){if(bigPictureModal())return;const card=document.activeElement?.closest('.card'),face=card?.querySelector('.cardFace'),match=/selectGame\('([^']+)'\)/.exec(face?.getAttribute('onclick') || '');if(match)toggleFavorite(match[1]);else if(!document.getElementById('library').classList.contains('show') && selectedGame)toggleFavorite(selectedGame.Id);restoreBigPictureFocus();}
+function favoriteBigPictureCard(){
+ if(bigPictureModal())return;
+ const active=document.activeElement,book=active?.closest('[data-book-id],[data-book-case]'),shelfId=book?.dataset.bookId || book?.dataset.bookCase || active?.closest('#bookshelfDetail')?.dataset.gameId;
+ const card=active?.closest('.card'),face=card?.querySelector('.cardFace'),match=/selectGame\('([^']+)'\)/.exec(face?.getAttribute('onclick') || '');
+ if(shelfId)toggleFavorite(shelfId);else if(match)toggleFavorite(match[1]);else if(!document.getElementById('library').classList.contains('show') && selectedGame)toggleFavorite(selectedGame.Id);
+ restoreBigPictureFocus();
+}
 function toggleBigPicture(){post({type:'setBigPicture',enabled:!bigPictureActive});}
 function setBigPictureUi(enabled){
  bigPictureActive=!!enabled;document.body.classList.toggle('bigPicture',bigPictureActive);
  bigPictureHeld.clear();bigPictureNativePad={connected:false};
  const footer=document.getElementById('bigPictureFooter');footer.hidden=!bigPictureActive;
- if(bigPictureActive){currentCategory='All';showLibrary(false);document.getElementById('libraryBody').scrollTop=0;bigPictureFocusKey='';requestAnimationFrame(()=>{focusBigPictureHome();document.getElementById('libraryBody').scrollTop=0;});startBigPicturePolling();}
+ if(bigPictureActive){currentCategory='All';showLibrary(false);document.getElementById('libraryBody').scrollTop=0;bigPictureFocusKey='';bigPictureLibraryFocusKey='';requestAnimationFrame(()=>{focusBigPictureHome();document.getElementById('libraryBody').scrollTop=0;});startBigPicturePolling();}
  else {cancelAnimationFrame(bigPictureFrame);bigPictureFrame=0;closeBigPictureKeyboard();const menu=document.getElementById('bigPictureMenu');if(menu)menu.classList.remove('show');render();}
  document.getElementById('bigPictureButton').title=igdbText(bigPictureActive?'Thoát Big Picture':'Big Picture · Toàn màn hình',bigPictureActive?'Exit Big Picture':'Big Picture · Fullscreen');
  renderControllerHints();
@@ -29,10 +35,18 @@ function setBigPictureUi(enabled){
 function handleBigPictureMessage(msg){if(msg.type==='bigPicture')setBigPictureUi(msg.enabled);else if(msg.type==='bigPicturePad')bigPictureNativePad=msg;}
 function bigPictureModal(){return [...document.querySelectorAll('.modal.show,.appDialogLayer')].filter(el=>el.getClientRects().length).pop();}
 function bigPictureScope(){return bigPictureModal() || (document.getElementById('library').classList.contains('show')?document.getElementById('library'):document.querySelector('.stage'));}
-function bigPictureCandidates(){const root=bigPictureScope();return [...root.querySelectorAll('button,input,select,textarea,summary,[tabindex="0"]')].filter(el=>!el.disabled && el.type!=='hidden' && el.getClientRects().length && !el.closest('[hidden]'));}
-function bigPictureKey(el){return el.id || el.getAttribute('onclick') || el.getAttribute('onchange') || el.getAttribute('aria-label') || el.textContent.trim();}
+function bigPictureCandidates(){const root=bigPictureScope();return [...root.querySelectorAll('button,input,select,textarea,summary,[tabindex="0"]')].filter(el=>!el.disabled && el.tabIndex>=0 && el.type!=='hidden' && el.getClientRects().length && !el.closest('[hidden]'));}
+function bigPictureKey(el){
+ if(el.id)return el.id;
+ const book=el.closest?.('[data-book-case]'),explore=el.closest?.('.exploreCard[data-explore-id]');
+ if(book)return 'book:'+book.dataset.bookCase+':'+(el.dataset.bookAction || 'case');
+ if(explore)return 'explore:'+explore.dataset.exploreKey+'|'+explore.dataset.exploreSource+':'+explore.dataset.exploreId;
+ if(el.dataset.bookAction)return 'book-detail:'+(el.closest('#bookshelfDetail')?.dataset.gameId || '')+':'+el.dataset.bookAction+':'+(el.dataset.bookTab || el.dataset.bookShot || '');
+ return el.getAttribute('onclick') || el.getAttribute('onchange') || el.getAttribute('aria-label') || el.textContent.trim();
+}
 function focusBigPicture(el){if(!el)return;el.focus({preventScroll:true});el.scrollIntoView({block:'nearest',inline:'nearest',behavior:'auto'});bigPictureFocusKey=bigPictureKey(el);}
-function focusBigPictureHome(){const scope=bigPictureScope(),el=scope.querySelector('.carouselHero .primary,.carouselTrack .cardFace,.exploreCard,#playBtn') || bigPictureCandidates()[0];focusBigPicture(el);}
+function focusBigPictureHome(){const scope=bigPictureScope(),el=scope.querySelector('.shelfCase.selected .shelfCaseFace') || scope.querySelector('.shelfCaseFace,.carouselHero .primary,.carouselTrack .cardFace,.exploreCard,#playBtn') || bigPictureCandidates()[0];focusBigPicture(el);}
+function returnBigPictureToLibrary(key=bigPictureLibraryFocusKey){const list=bigPictureCandidates(),el=list.find(item=>bigPictureKey(item)===key);if(el)focusBigPicture(el);else focusBigPictureHome();}
 function restoreBigPictureFocus(){if(!bigPictureActive)return;const list=bigPictureCandidates();if(list.includes(document.activeElement))return;focusBigPicture(list.find(el=>bigPictureKey(el)===bigPictureFocusKey) || list[0]);}
 function chooseSpatialTarget(origin,candidates,direction){
  let result=null,best=Infinity;const ox=origin.left+origin.width/2,oy=origin.top+origin.height/2;
@@ -40,20 +54,26 @@ function chooseSpatialTarget(origin,candidates,direction){
   const score=along+across*3+(across>along?across*4:0);if(score<best){best=score;result=item.element;}
  }return result;
 }
+function bigPictureNavigationRect(el){return (el.matches?.('.shelfCaseFace')?el.closest('.shelfCase'):el).getBoundingClientRect();}
 function moveBigPicture(direction){
  const current=document.activeElement,list=bigPictureCandidates();if(!list.includes(current)){focusBigPicture(list[0]);return;}
  if(current.type==='range' && (direction==='left' || direction==='right')){direction==='right'?current.stepUp():current.stepDown();current.dispatchEvent(new Event('input',{bubbles:true}));current.dispatchEvent(new Event('change',{bubbles:true}));return;}
  if(current.tagName==='SELECT' && (direction==='up' || direction==='down')){current.selectedIndex=Math.max(0,Math.min(current.options.length-1,current.selectedIndex+(direction==='down'?1:-1)));current.dispatchEvent(new Event('change',{bubbles:true}));return;}
- const target=chooseSpatialTarget(current.getBoundingClientRect(),list.filter(el=>el!==current).map(element=>({element,rect:element.getBoundingClientRect()})),direction);if(target)focusBigPicture(target);
+ const target=chooseSpatialTarget(bigPictureNavigationRect(current),list.filter(el=>el!==current).map(element=>({element,rect:bigPictureNavigationRect(element)})),direction);if(target)focusBigPicture(target);
 }
 function bigPictureBack(){
  if(document.getElementById('bigPictureKeyboard')?.classList.contains('show')){closeBigPictureKeyboard();return;}
  const modal=bigPictureModal();
  if(modal){
+  const libraryKey=bigPictureLibraryFocusKey;
   const close={bigPictureMenu:()=>modal.classList.remove('show'),exploreDetail:closeExploreDetail,appSettingsModal:closeAppSettings,modal:closeEditor,pluginModal:closePluginEditor,pinModal:closePinModal,scanModal:closeScanReview,systemModal:closeSystemInfo,watchModal:closeWatchEditor,igdbSearchModal:closeIgdbSearch,igdbViewer:closeIgdbViewer};
-  if(close[modal.id])close[modal.id]();else {const cancel=modal.querySelector('.appDialogCancel,button.ghost');if(cancel)cancel.click();else modal.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));}restoreBigPictureFocus();return;
+  if(close[modal.id])close[modal.id]();else {const cancel=modal.querySelector('.appDialogCancel,button.ghost');if(cancel)cancel.click();else modal.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));}
+  if(!bigPictureModal() && document.getElementById('library').classList.contains('show'))returnBigPictureToLibrary(libraryKey);else restoreBigPictureFocus();return;
  }
- if(!document.getElementById('library').classList.contains('show')){showLibrary();focusBigPictureHome();return;}
+ if(!document.getElementById('library').classList.contains('show')){const key=bigPictureLibraryFocusKey;showLibrary();returnBigPictureToLibrary(key);return;}
+ if(state.Settings.LibraryLayout==='bookshelf'){
+  if(currentCategory!=='__explore' && typeof bookshelfSelectedId==='string' && bookshelfSelectedId){const id=bookshelfSelectedId;setBookshelfSelection('');focusBigPicture([...document.querySelectorAll('.shelfCaseFace[data-book-id]')].find(face=>face.dataset.bookId===id));return;}
+ }
  if(currentCategory==='__explore' && exploreMode==='dealsBrowse'){closeSteamDeals();restoreBigPictureFocus();return;}
  if(currentCategory==='__explore' && exploreMode==='search'){selectExploreMode('home');restoreBigPictureFocus();return;}
  if(currentCategory!=='All'){selectCategory('All');restoreBigPictureFocus();return;}openBigPictureMenu();
@@ -107,7 +127,7 @@ document.addEventListener('keydown',event=>{
  else if(event.key==='Escape'){event.preventDefault();event.stopImmediatePropagation();bigPictureBack();}
  else if(event.key==='Enter' && !['INPUT','TEXTAREA'].includes(document.activeElement?.tagName)){event.preventDefault();event.stopImmediatePropagation();activateBigPicture();}
 },true);
-document.addEventListener('focusin',event=>{if(bigPictureActive && event.target instanceof HTMLElement)bigPictureFocusKey=bigPictureKey(event.target);});
+document.addEventListener('focusin',event=>{if(bigPictureActive && event.target instanceof HTMLElement){bigPictureFocusKey=bigPictureKey(event.target);if(event.target.closest('#library'))bigPictureLibraryFocusKey=bigPictureFocusKey;}});
 function pauseBigPicturePolling(){cancelAnimationFrame(bigPictureFrame);bigPictureFrame=0;bigPictureHeld.clear();bigPictureNativePad={connected:false};}
 window.addEventListener('blur',pauseBigPicturePolling);
 window.addEventListener('focus',startBigPicturePolling);

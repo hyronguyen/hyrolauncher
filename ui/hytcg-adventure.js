@@ -1,7 +1,8 @@
 'use strict';
 /* Presentation uses native quotes, ownership, battle turns and purchase receipts. */
 window.HyTcgAdventure = (() => {
-  let E;
+  let E, arenaSequence=0;
+  const floatingTimers=new Set();
   const F=(o,k,d='')=>E.field(o,k,d), S=value=>E.safe(String(value??'')), T=(en,vi)=>E.tx(en,vi);
   const button=(action,label,extra='',kind='')=>'<button class="lifeButton '+kind+'" data-adventure-action="'+action+'" '+extra+'>'+label+'</button>';
   const draft=a=>({id:F(a,'Id'),name:F(a,'Name'),cover:F(a,'Cover',F(a,'Background','midnight')),background:F(a,'Background','midnight'),capacity:F(a,'Capacity',Math.max(4,F(a,'CardIds',[]).length)),cardIds:[...F(a,'CardIds',[])]});
@@ -75,43 +76,79 @@ window.HyTcgAdventure = (() => {
       '<div class="lifeTwoColumn"><section class="lifeSection"><header class="lifeSectionHeading"><h2>'+T('Your team','Đội của bạn')+'</h2>'+button('skillsOpen','✦ '+T('Skills','Kỹ năng'))+'</header>'+
       E.teamMarkup('arena')+'<div class="lifeActions">'+E.btn(T('Enter battle','Vào trận'),'fight',E.state.arenaTeam.length<1||F(fight,'DailyRemaining',0)<1?'disabled':'','primary')+
       '<span class="lifeMuted">'+F(fight,'DailyRemaining',0)+' / '+F(fight,'DailyLimit',3)+' '+T('attempts','lượt')+'</span></div></section><section class="lifeSection">'+E.renderResult(F(fight,'LastResult',null))+'</section></div>';
-    const team=F(battle,'Team',[]),complete=F(battle,'Complete',false)&&!s.arenaAnimating,actor=team[F(battle,'Actor',0)],skills=F(E.profile(F(actor,'CardId')),'Skills',fallbackSkills);
     const visual=s.arenaVisual?.id===F(battle,'Id')?s.arenaVisual:null;
+    const team=visual?visual.team:F(battle,'Team',[]),complete=F(battle,'Complete',false)&&!s.arenaAnimating,actor=team[visual?visual.actor:F(battle,'Actor',0)],skills=F(E.profile(F(actor,'CardId')),'Skills',fallbackSkills);
     const units=team.map(unit=>{
-      const id=F(unit,'CardId'),old=visual?.team.find(u=>F(u,'CardId')===id),hp=old?F(old,'Hp'):F(unit,'Hp'),energy=F(unit,'Energy');
+      const id=F(unit,'CardId'),hp=F(unit,'Hp'),energy=F(unit,'Energy');
       return '<div class="arenaFighter '+(id===F(actor,'CardId')&&!complete?'acting':'')+(F(unit,'Hp')===0?' fainted':'')+'" data-arena-unit="'+S(id)+'"><div class="arenaFighterName">'+S(F(unit,'Name'))+'</div>'+E.miniCard(id)+hpBar(id,hp,F(unit,'MaxHp'))+'<span class="arenaEnergy">⚡ '+energy+'/6'+(F(unit,'Shield',false)?' · 🛡️':'')+(F(unit,'Focus',0)?' · ✨':'')+'</span></div>';
     }).join('');
     const enemySvg='<svg viewBox="0 0 180 180" aria-hidden="true"><defs><linearGradient id="sentinelBody" x2="0" y2="1"><stop stop-color="#d2d9ff"/><stop offset="1" stop-color="#6875b3"/></linearGradient></defs><ellipse cx="90" cy="157" rx="65" ry="12" fill="#101c4266"/><path d="M45 82 25 120 48 138 67 109M135 82l20 42-23 15-21-29" fill="#8b99d0" stroke="#d9ddff" stroke-width="3"/><path d="M58 69 90 49l34 20 11 53-45 28-45-28z" fill="url(#sentinelBody)" stroke="#e9edff" stroke-width="3"/><path d="m70 33 20-15 20 15 10 27-30 19-30-19z" fill="#242e59" stroke="#afc2ff" stroke-width="3"/><path d="m73 44 13 4m9 0 13-4" stroke="#60e8ed" stroke-width="6"/><path d="m90 92 10 12-10 12-10-12z" fill="#d7a3ff"/><path d="m53 144 12 14-30 4m89-18-12 14 32 4" stroke="#b7c3ef" stroke-width="10"/></svg>';
-    return '<header class="arenaBattleHeader"><div><span>'+T('Stage ','Chặng ')+F(battle,'Stage')+'</span><h2>'+T('Turn ','Lượt ')+F(battle,'Turn')+'</h2></div>'+
+    return '<header class="arenaBattleHeader"><div><span>'+T('Stage ','Chặng ')+F(battle,'Stage')+'</span><h2>'+T('Turn ','Lượt ')+(visual?visual.turn:F(battle,'Turn'))+'</h2></div>'+
       (!complete?button('battleForfeit',T('Forfeit','Rút lui'),s.arenaAnimating?'disabled':''):button('arenaNew',T('New battle','Trận mới')) )+'</header>'+
-      '<div class="arenaBattlefield scene-arena"><div class="arenaOpponent" data-arena-unit="enemy"><strong>'+S(F(battle,'EnemyName'))+'</strong>'+hpBar('enemy',visual?visual.enemyHp:F(battle,'EnemyHp'),F(battle,'EnemyMaxHp'),true)+enemySvg+'</div><div class="arenaParty">'+units+'</div></div>'+
+      '<div class="arenaBattlefield scene-arena" data-arena-battle="'+S(F(battle,'Id'))+'" aria-busy="'+s.arenaAnimating+'"><div class="arenaOpponent" data-arena-unit="enemy"><strong>'+S(F(battle,'EnemyName'))+'</strong>'+hpBar('enemy',visual?visual.enemyHp:F(battle,'EnemyHp'),F(battle,'EnemyMaxHp'),true)+enemySvg+'</div><div class="arenaParty">'+units+'</div></div>'+
       (complete?'<section class="lifeSection arenaOutcome">'+E.renderResult(F(fight,'LastResult'))+'</section>':
       '<section class="arenaCommands"><header><strong>'+S(F(actor,'Name'))+'</strong><span>'+T('Choose a skill','Chọn kỹ năng')+'</span></header><div class="arenaSkillGrid">'+F(actor,'Skills',[]).map(id=>{
         const skill=skills.find(x=>F(x,'Id')===id)||{},disabled=s.arenaAnimating||F(actor,'Energy')<F(skill,'Energy');
         return button('battleSkill','<span>'+skillIcon(id)+'</span><b>'+S(skillName(id))+'</b><small>⚡ '+F(skill,'Energy',0)+'</small>','data-skill="'+S(id)+'" '+(disabled?'disabled':''),'arenaSkill');
       }).join('')+'</div>'+(s.arenaTargetSkill?'<div class="arenaTargetChooser"><span>'+T('Heal target','Nhân vật hồi phục')+'</span>'+team.filter(x=>F(x,'Hp')>0).map(u=>button('battleTarget',S(F(u,'Name')),'data-target="'+S(F(u,'CardId'))+'"')).join('')+button('battleTargetCancel','×')+'</div>':'')+'</section>');
   }
+  function clearFloating() {
+    for(const timer of floatingTimers)clearTimeout(timer);floatingTimers.clear();
+    E?.content.querySelectorAll('.arenaFloating').forEach(node=>node.remove());
+  }
+  function cancelArena() {
+    arenaSequence++;clearFloating();
+    window.HyTcgArenaEffects?.clear();
+    if(E)Object.assign(E.state,{arenaAnimating:false,arenaVisual:null,arenaTargetSkill:''});
+  }
+  function arenaImpact(event,battle,visual,target) {
+    const kind=F(event,'Kind'),id=F(event,'TargetId'),unit=visual.team.find(x=>F(x,'CardId')===id);
+    const max=id==='enemy'?F(battle,'EnemyMaxHp'):F(unit,'MaxHp',1),hp=Math.max(0,Math.min(max,Number(F(event,'HpAfter',0))));
+    if(id==='enemy')visual.enemyHp=hp;else if(unit){unit.Hp=hp;if(kind==='guard')unit.Shield=true;else if(kind==='focus')unit.Focus=2;else if(kind==='attack')unit.Shield=false;}
+    const label=E.content.querySelector('[data-arena-hp="'+CSS.escape(id)+'"]'),bar=E.content.querySelector('[data-arena-bar="'+CSS.escape(id)+'"]');
+    if(label)label.textContent=hp+' / '+max;if(bar)bar.style.setProperty('--life-progress',(hp/max*100)+'%');
+    if(!target)return;
+    target.classList.toggle('fainted',hp===0);
+    if(unit){window.HyTcgArenaEffects?.setGuard(target,Boolean(F(unit,'Shield',false)));const energy=target.querySelector('.arenaEnergy');if(energy)energy.textContent='⚡ '+F(unit,'Energy',0)+'/6'+(F(unit,'Shield',false)?' · 🛡️':'')+(F(unit,'Focus',0)?' · ✨':'');}
+    const text=document.createElement('b');text.className='arenaFloating '+(kind==='heal'?'healing':kind==='guard'||kind==='focus'?'support':'');
+    text.textContent=kind==='guard'?'🛡️':kind==='focus'?'✨':(kind==='heal'?'+':'−')+F(event,'Amount',0);target.append(text);
+    const timer=setTimeout(()=>{text.remove();floatingTimers.delete(timer);},750);floatingTimers.add(timer);
+  }
   async function turn(skill,target='') {
-    const s=E.state,b=F(E.gameplay(),'Battle',null);if(!b||F(b,'Complete')||s.arenaAnimating)return;
-    s.arenaVisual={id:F(b,'Id'),enemyHp:F(b,'EnemyHp'),team:structuredClone(F(b,'Team',[]))};s.arenaAnimating=true;s.arenaTargetSkill='';
-    const reply=await E.run('battleTurn',{battleId:F(b,'Id'),turn:F(b,'Turn'),skillId:skill,targetId:target});
-    if(!reply){s.arenaAnimating=false;s.arenaVisual=null;E.render();return;}
-    E.render();const updated=F(E.gameplay(),'Battle'),events=F(updated,'Events',[]);
-    for(const event of events) {
-      if(s.view!=='arena'||document.hidden)break;
-      const actor=E.content.querySelector('[data-arena-unit="'+CSS.escape(F(event,'ActorId'))+'"]'),victim=E.content.querySelector('[data-arena-unit="'+CSS.escape(F(event,'TargetId'))+'"]'),kind=F(event,'Kind');
-      const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
-      if(actor&&!reduced)try{await actor.animate(kind==='attack'?[{transform:'translateX(0)'},{transform:'translateX('+(F(event,'ActorId')==='enemy'?-38:38)+'px)',offset:.5},{transform:'translateX(0)'}]:[{filter:'brightness(1)'},{filter:'brightness(1.5)'},{filter:'brightness(1)'}],{duration:430,easing:'ease-in-out'}).finished;}catch{}
-      if(victim) {
-        const text=document.createElement('b');text.className='arenaFloating '+(kind==='heal'?'healing':'');text.textContent=F(event,'Amount')?(kind==='heal'?'+':'−')+F(event,'Amount'):kind==='guard'?'🛡️':'✨';victim.append(text);
-        const hp=E.content.querySelector('[data-arena-hp="'+CSS.escape(F(event,'TargetId'))+'"]'),bar=E.content.querySelector('[data-arena-bar="'+CSS.escape(F(event,'TargetId'))+'"]');
-        const max=F(event,'TargetId')==='enemy'?F(updated,'EnemyMaxHp'):F(updated,'Team',[]).find(x=>F(x,'CardId')===F(event,'TargetId'))?.MaxHp;
-        if(hp)hp.textContent=F(event,'HpAfter')+' / '+max;if(bar)bar.style.setProperty('--life-progress',(F(event,'HpAfter')/max*100)+'%');
-        if(!reduced)try{await victim.animate(kind==='attack'?[{filter:'brightness(1)'},{filter:'brightness(1.8)'},{filter:'brightness(1)'}]:[{boxShadow:'0 0 0 0 #87eebc00'},{boxShadow:'0 0 25px 5px #87eebc99'},{boxShadow:'0 0 0 0 #87eebc00'}],{duration:330}).finished;}catch{}
-        text.remove();
+    const s=E.state,b=F(E.gameplay(),'Battle',null);if(!b||F(b,'Complete')||s.busy||s.arenaAnimating)return;
+    const sequence=++arenaSequence,epoch=s.epoch;
+    const visual=s.arenaVisual={id:F(b,'Id'),enemyHp:F(b,'EnemyHp'),team:structuredClone(F(b,'Team',[])),actor:F(b,'Actor',0),turn:F(b,'Turn')};
+    s.arenaAnimating=true;s.arenaTargetSkill='';E.render(true);
+    const active=()=>sequence===arenaSequence&&epoch===s.epoch&&s.view==='arena'&&!E.$('lifestyleView').hidden&&!document.hidden;
+    try {
+      const reply=await E.run('battleTurn',{battleId:F(b,'Id'),turn:F(b,'Turn'),skillId:skill,targetId:target});
+      if(!active()){if(epoch===s.epoch&&!s.arenaAnimating&&s.view==='arena'&&!E.$('lifestyleView').hidden)E.render();return;}
+      if(!reply)return;
+      const updated=structuredClone(F(E.gameplay(),'Battle',null));if(!updated||F(updated,'Id')!==visual.id)return;
+      const events=F(updated,'Events',[]),battlefield=E.content.querySelector('.arenaBattlefield');
+      for(let index=0;index<events.length;index++) {
+        if(!active()||!battlefield?.isConnected)break;
+        const event=events[index],actorId=F(event,'ActorId'),targetId=F(event,'TargetId'),kind=F(event,'Kind');
+        const actor=E.content.querySelector('[data-arena-unit="'+CSS.escape(actorId)+'"]'),victim=E.content.querySelector('[data-arena-unit="'+CSS.escape(targetId)+'"]');
+        const victimUnit=visual.team.find(x=>F(x,'CardId')===targetId),blocked=kind==='attack'&&Boolean(F(victimUnit,'Shield',false));
+        let impacted=false;
+        const onImpact=()=>{
+          if(impacted||!active())return;impacted=true;
+          if(index===0&&actorId!=='enemy'){const unit=visual.team.find(x=>F(x,'CardId')===actorId),skillInfo=F(E.profile(actorId),'Skills',fallbackSkills).find(x=>F(x,'Id')===F(event,'SkillId'));if(unit){unit.Energy=Math.max(0,F(unit,'Energy',0)-F(skillInfo,'Energy',0));if(kind==='attack'&&F(unit,'Focus',0)>0)unit.Focus--;}}
+          arenaImpact(event,updated,visual,victim);
+        };
+        const effects=window.HyTcgArenaEffects;
+        if(effects) {
+          try{await effects.play({battlefield,actor,target:victim,event,blocked,onImpact,reducedMotion:matchMedia('(prefers-reduced-motion: reduce)').matches,sound:{enabled:!tcg.settings?.DisableEffects,volume:.45,baseUrl:new URL('../assets/hytcg/',document.baseURI).href}});}catch{onImpact();}
+        } else {
+          // Keep action timing visible even if an effect module fails to load.
+          try{await actor?.animate([{transform:'scale(1)'},{transform:'scale(1.08)'},{transform:'scale(1)'}],{duration:600}).finished;}catch{}onImpact();
+        }
+        if(active())onImpact();
       }
+    } finally {
+      if(sequence===arenaSequence&&epoch===s.epoch){window.HyTcgArenaEffects?.clear();clearFloating();s.arenaAnimating=false;s.arenaVisual=null;if(!E.$('lifestyleView').hidden)E.render(true);}
     }
-    s.arenaAnimating=false;s.arenaVisual=null;E.render();
   }
   function artworkPanel(section) {
     const mode=E.state.artMode||'original',labels={original:T('Original','Gốc'),file:T('Image','Ảnh'),url:'URL',sketch:T('Sketch','Vẽ')};
@@ -124,6 +161,10 @@ window.HyTcgAdventure = (() => {
   }
   function afterRender(root) {
     const s=E.state;
+    if(s.view==='arena'){
+      const field=root.querySelector('.arenaBattlefield'),battle=F(E.gameplay(),'Battle',null),team=s.arenaVisual?.team||F(battle,'Team',[]);
+      if(field)window.HyTcgArenaEffects?.syncGuards(field,team.filter(unit=>F(unit,'Shield',false)).map(unit=>F(unit,'CardId')));
+    }
     if(s.view==='studio'&&s.studioPanel==='style') {
       const right=root.querySelector('.lifeTwoColumn>.lifeSection:last-child');if(right&&E.getStudio())artworkPanel(right);
       root.querySelector('.lifeStudioSelections+.lifeActions')?.remove();
@@ -204,6 +245,6 @@ window.HyTcgAdventure = (() => {
     }).join('');
     E.$('missionCards').querySelectorAll('[data-life-progress]').forEach(node=>node.style.width=node.dataset.lifeProgress+'%');return true;
   }
-  function reset(){if(!E)return;Object.assign(E.state,{albumPurchase:null,albumRestyling:false,albumEditing:false,albumPage:0,arenaSetup:false,arenaSkills:false,arenaAnimating:false,arenaVisual:null,skillDraft:null,artMode:'original'});}
-  return {install,afterRender,reset,renderMissions,renderView:view=>!E?null:view==='album'?albumView():view==='arena'?arenaView():null};
+  function reset(){if(!E)return;cancelArena();Object.assign(E.state,{albumPurchase:null,albumRestyling:false,albumEditing:false,albumPage:0,arenaSetup:false,arenaSkills:false,arenaAnimating:false,arenaVisual:null,skillDraft:null,artMode:'original'});}
+  return {install,afterRender,reset,cancelArena,renderMissions,renderView:view=>!E?null:view==='album'?albumView():view==='arena'?arenaView():null};
 })();

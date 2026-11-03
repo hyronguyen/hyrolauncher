@@ -27,6 +27,49 @@ internal sealed class BookshelfNativeSmoke : Form
     private async Task<object> Script(string source){return json.DeserializeObject(await browser.CoreWebView2.ExecuteScriptAsync(source));}
     private async Task<Dictionary<string,object>> Snapshot(){return (Dictionary<string,object>)await Script("(()=>{const e=document.querySelector('[data-book-case=\"qa-1\"]'),f=e.querySelector('.shelfCaseFace'),m=new DOMMatrixReadOnly(getComputedStyle(f).transform);return {axis:m.m11,z:m.m43,y:m.m42,duration:getComputedStyle(f).transitionDuration,selected:e.classList.contains('selected'),same:window.qaCase===e,neighbor:document.querySelector('[data-book-case=\"qa-2\"]').getBoundingClientRect().x};})()");}
     private static double Number(Dictionary<string,object> item,string key){return Convert.ToDouble(item[key]);}
+    private async Task<Dictionary<string,object>> RgbSnapshot()
+    {
+        return (Dictionary<string,object>)await Script("(()=>{const row=document.querySelector('.cabinetCases'),style=getComputedStyle(row,'::before'),animation=row.getAnimations({subtree:true}).find(a=>a.animationName==='bookshelfRgbCycle');return {time:performance.now(),filter:style.filter,currentTime:animation?animation.currentTime:null,animationName:style.animationName,duration:style.animationDuration,playState:style.animationPlayState,reducedMotion:matchMedia('(prefers-reduced-motion: reduce)').matches,hidden:document.hidden,resourceIdle:document.getElementById('app').classList.contains('resourceIdle'),libraryVisible:document.getElementById('library').classList.contains('show'),gridClass:document.getElementById('grid').className};})()");
+    }
+    private async Task CheckRgbPaused(string name)
+    {
+        await Task.Delay(150);var first=await RgbSnapshot();await Task.Delay(200);var last=await RgbSnapshot();
+        report[name]=new object[]{first,last};
+        Check((string)first["playState"]=="paused",name+" did not pause the actual WebView2 RGB effect.");
+        Check(Math.Abs(Number(first,"currentTime")-Number(last,"currentTime"))<.01 && (string)first["filter"]==(string)last["filter"],name+" continued advancing while paused.");
+    }
+    private async Task ProbeRgb(bool baseline)
+    {
+        await Script("state.Settings.BookshelfBacklightMode='rgb-cycle';state.Settings.BookshelfRgbSpeed=400;state.Settings.BookshelfLightingIntensity=100;applyBookshelfSettings();");
+        await Task.Delay(200);
+        var samples=new List<object>();
+        for(int i=0;i<9;i++)
+        {
+            samples.Add(await RgbSnapshot());
+            if(i<8)await Task.Delay(150);
+        }
+        report["RgbSynchronizedSamples"]=samples;
+        var first=(Dictionary<string,object>)samples[0];var last=(Dictionary<string,object>)samples[samples.Count-1];
+        report["RgbObservedMotion"]=(string)first["filter"]!=(string)last["filter"];
+        if(!baseline)
+        {
+            Check((string)first["animationName"]=="bookshelfRgbCycle" && (string)first["duration"]=="3s","Synchronized RGB 4x did not initialize its three-second cycle.");
+            Check(!(bool)first["hidden"] && !(bool)first["resourceIdle"] && (bool)first["libraryVisible"],"Native RGB fixture is unexpectedly hidden or idle.");
+            Check((string)first["playState"]=="running","Explicit synchronized RGB selection is paused in the actual WebView2 host.");
+            Check(Number(last,"currentTime")>Number(first,"currentTime")+700,"Actual WebView2 RGB animation clock did not advance.");
+            Check((string)first["filter"]!=(string)last["filter"],"Actual WebView2 shelf light did not change color.");
+            await Script("state.Settings.BookshelfLightingIntensity=0;applyBookshelfSettings();");
+            await CheckRgbPaused("RgbBrightnessOff");
+            await Script("state.Settings.BookshelfLightingIntensity=100;applyBookshelfSettings();document.getElementById('app').classList.add('resourceIdle');");
+            await CheckRgbPaused("RgbNativeIdle");
+            await Script("document.getElementById('app').classList.remove('resourceIdle');");
+            browser.Visible=false;await CheckRgbPaused("RgbHiddenWebView");
+            Check((bool)((Dictionary<string,object>)((object[])report["RgbHiddenWebView"])[0])["hidden"],"Hiding the actual WebView did not set document.hidden.");
+            browser.Visible=true;await Task.Delay(150);var resumedFirst=await RgbSnapshot();await Task.Delay(200);var resumedLast=await RgbSnapshot();
+            report["RgbVisibleResumed"]=new object[]{resumedFirst,resumedLast};
+            Check((string)resumedLast["playState"]=="running" && Number(resumedLast,"currentTime")>Number(resumedFirst,"currentTime")+100,"Showing the actual WebView did not resume RGB motion.");
+        }
+    }
     private async Task SendState(bool effects)
     {
         string svg="data:image/svg+xml,"+Uri.EscapeDataString("<svg xmlns='http://www.w3.org/2000/svg' width='600' height='900'><rect width='600' height='900' fill='#245678'/><text x='20' y='100' fill='white' font-size='40'>Native fixture</text></svg>");
@@ -40,6 +83,7 @@ internal sealed class BookshelfNativeSmoke : Form
         {
             bool forced=Environment.GetCommandLineArgs().Length>1 && Environment.GetCommandLineArgs()[1]=="reduced";
             bool baseline=Environment.GetCommandLineArgs().Length>2 && Environment.GetCommandLineArgs()[2]=="baseline";
+            bool rgbOnly=Array.IndexOf(Environment.GetCommandLineArgs(),"rgb")>=0;
             var options=new CoreWebView2EnvironmentOptions(forced?"--force-prefers-reduced-motion":"");
             var environment=await CoreWebView2Environment.CreateAsync(null,Path.Combine(root,"profile"),options);
             await browser.EnsureCoreWebView2Async(environment);
@@ -51,6 +95,9 @@ internal sealed class BookshelfNativeSmoke : Form
             report["PrefersReducedMotion"]=await Script("matchMedia('(prefers-reduced-motion: reduce)').matches");
             await SendState(false);await Task.Delay(400);
             Check(Convert.ToInt32(await Script("document.querySelectorAll('.shelfCase').length"))==2,"Real document did not render two fixture cases.");
+            await ProbeRgb(baseline);
+            if(!rgbOnly)
+            {
             await Script("window.qaCase=document.querySelector('[data-book-case=\"qa-1\"]')");
             var closed=await Snapshot();report["Closed"]=closed;
             await Script("document.querySelector('[data-book-case=\"qa-1\"] .shelfCaseFace').click()");
@@ -80,6 +127,7 @@ internal sealed class BookshelfNativeSmoke : Form
             await Script("state.Settings.BookshelfAnimationsEnabled=false;applyBookshelfSettings();setBookshelfSelection('qa-1')");
             await Task.Delay(80);var disabled=await Snapshot();report["ExplicitDisabled"]=disabled;
             if(!baseline)Check((string)disabled["duration"]=="0s","The dedicated animation toggle no longer disables motion.");
+            }
             report["Checks"]=checks;report["Status"]="PASS";File.WriteAllText(Path.Combine(root,"report.json"),json.Serialize(report));
             Console.WriteLine("PASS "+checks+" actual WebView2 bookshelf checks; reduced motion="+report["PrefersReducedMotion"]);Environment.ExitCode=0;
         }

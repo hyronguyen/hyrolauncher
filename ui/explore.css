@@ -1,5 +1,6 @@
 #exploreLibrary[hidden] {display:none;}
 .library.exploreMode .searchWrap {display:none;}
+.library.exploreMode #grid{display:none!important;}
 .exploreHeader {padding:24px 26px; margin:6px 0 20px; border-radius:18px; background:linear-gradient(120deg,#1f3446,#171c2c 65%,#213342); border:1px solid #ffffff12;}
 .exploreHeader>span {font-size:10px;letter-spacing:2px;color:var(--accent);font-weight:700;}
 .exploreHeader h2 {font-size:32px;margin:8px 0;}

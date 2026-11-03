@@ -25,7 +25,7 @@ function updateBackgroundPreview() {
   const overlay = document.querySelector('.backgroundPreview>div');
   if (overlay) overlay.style.background = backgroundDimColor(sThemeMode.value, libraryBackgroundDraft.dim);
 }
-function backgroundDimColor(theme, dim) { return `rgba(${theme === 'light' ? '244,247,251' : '8,10,18'},${Math.max(0, Math.min(100, dim)) / 100})`; }
+function backgroundDimColor(theme, dim) { return `rgba(${theme === 'light' ? '244,247,251' : theme === 'cozy' ? '32,25,19' : '8,10,18'},${Math.max(0, Math.min(100, dim)) / 100})`; }
 function removeLibraryBackground() { libraryBackgroundDraft.path = ''; renderLibraryBackgroundSettings(); }
 function chooseLibraryBackground(path) {
   if (!libraryBackgroundDraft.path) libraryBackgroundDraft.dim = 45;
